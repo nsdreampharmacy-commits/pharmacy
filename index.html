@@ -318,6 +318,14 @@ function updateClock(){
   if(tb){ tb.textContent = h < 14 ? '오전 주문' : '오후 주문'; tb.className = 'time-badge '+(h<14?'am-badge':'pm-badge'); }
 }
 setInterval(updateClock, 1000); updateClock();
+
+// 최소필요량 클릭 이벤트 위임
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.min-stock-btn');
+  if(!btn) return;
+  const idx = parseInt(btn.getAttribute('data-idx'));
+  editMinStock(idx, btn);
+});
 updateLastOrderBtn();
 
 // 당겨서 새로고침 방지
@@ -448,8 +456,10 @@ function makeRow(d, idx){
   const minStockMap = getMinStock();
   const minVal = minStockMap[d.name] || '';
   function minStockBadge(){
-    if(!minVal) return `<span class="stock-val" style="background:#f3f4f6;color:#9ca3af;cursor:pointer;min-width:34px" onclick="editMinStock(${idx},this)">-</span>`;
-    return `<span class="stock-val" style="background:#e0e7ff;color:#3730a3;cursor:pointer;min-width:34px" onclick="editMinStock(${idx},this)">${minVal}</span>`;
+    const bg = minVal ? '#e0e7ff' : '#f3f4f6';
+    const color = minVal ? '#3730a3' : '#9ca3af';
+    const text = minVal || '-';
+    return `<span class="stock-val min-stock-btn" data-idx="${idx}" style="background:${bg};color:${color};cursor:pointer;min-width:34px">${text}</span>`;
   }
   function amBadge(unitVal){
     const key = unitVal ? d.name+'|'+unitVal : d.name;
