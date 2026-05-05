@@ -449,9 +449,18 @@ function makeRow(d, idx){
 
   function stockBadge(sv){
     if(sv==='-') return `<span class="stock-val">${sv}</span>`;
-    if(sv<=0) return `<span class="stock-val" style="background:#fee2e2;color:#991b1b">${sv}</span>`;
-    if(sv<30) return `<span class="stock-val" style="background:#fef3c7;color:#92400e">${sv}</span>`;
-    return `<span class="stock-val" style="background:#f3f4f6;color:#374151">${sv}</span>`;
+    const minVal2 = getMinStock()[d.name];
+    if(minVal2){
+      // 최소필요량 설정된 경우
+      if(sv < minVal2) return `<span class="stock-val" style="background:#fee2e2;color:#991b1b">${sv}</span>`;
+      if(sv < minVal2 * 1.1) return `<span class="stock-val" style="background:#fef3c7;color:#92400e">${sv}</span>`;
+      return `<span class="stock-val" style="background:#f3f4f6;color:#374151">${sv}</span>`;
+    } else {
+      // 최소필요량 미설정: 기존 방식
+      if(sv<=0) return `<span class="stock-val" style="background:#fee2e2;color:#991b1b">${sv}</span>`;
+      if(sv<30) return `<span class="stock-val" style="background:#fef3c7;color:#92400e">${sv}</span>`;
+      return `<span class="stock-val" style="background:#f3f4f6;color:#374151">${sv}</span>`;
+    }
   }
   const minStockMap = getMinStock();
   const minVal = minStockMap[d.name] || '';
