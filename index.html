@@ -822,15 +822,16 @@ function setMinStock(name, val){
   saveMinStock(map);
 }
 async function syncFromCloud(){
-  // 클라우드에서 최신 데이터 불러와서 로컬에 동기화
-  const minStock = await gsGet('min_stock');
-  if(minStock) localStorage.setItem('min_stock', JSON.stringify(minStock));
-  const customG1 = await gsGet('custom_g1');
-  if(customG1) localStorage.setItem('custom_g1', JSON.stringify(customG1));
-  const lastOrder = await gsGet('last_order');
-  if(lastOrder) localStorage.setItem('last_order', JSON.stringify(lastOrder));
-  const amOrder = await gsGet('am_order');
-  if(amOrder) localStorage.setItem('am_order', JSON.stringify(amOrder));
+  try{
+    const minStock = await gsGet('min_stock');
+    if(minStock && typeof minStock === 'object') localStorage.setItem('min_stock', JSON.stringify(minStock));
+    const customG1 = await gsGet('custom_g1');
+    if(customG1 && Array.isArray(customG1)) localStorage.setItem('custom_g1', JSON.stringify(customG1));
+    const lastOrder = await gsGet('last_order');
+    if(lastOrder && lastOrder.items) localStorage.setItem('last_order', JSON.stringify(lastOrder));
+    const amOrder = await gsGet('am_order');
+    if(amOrder && typeof amOrder === 'object') localStorage.setItem('am_order', JSON.stringify(amOrder));
+  }catch(e){ console.log('클라우드 동기화 실패(무시):', e); }
 }
 
 function getCustomG1(){ try{ return JSON.parse(localStorage.getItem('custom_g1')||'[]'); }catch(e){ return []; } }
