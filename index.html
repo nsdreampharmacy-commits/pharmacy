@@ -284,15 +284,13 @@ let currentGroup=1;
 
 // 로컬스토리지
 // ===== 클라우드 동기화 (백그라운드, 앱 동작에 영향 없음) =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFxGewnb0AHMWqEZnV3ER3QGOs2V3fiDOKHYS9j76KtpM5VIW5Ih_zLOMBNHcqVBa_tQ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzUw1ogPSkIjZ1RWk04zgRllWhRrrQeg1j38Vizq6e6iOVv11A-KCA_vPCJkNYBZO6rIw/exec';
 
 function cloudSave(key, value){
   try{
-    fetch(GAS_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({action:'set', key:key, value:JSON.stringify(value)})
-    }).catch(()=>{});
+    const val = encodeURIComponent(JSON.stringify(value));
+    const url = GAS_URL + '?action=set&key=' + encodeURIComponent(key) + '&value=' + val;
+    fetch(url).catch(()=>{});
   }catch(e){}
 }
 
