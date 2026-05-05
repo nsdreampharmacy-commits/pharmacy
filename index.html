@@ -444,6 +444,12 @@ function makeRow(d, idx){
     if(sv<30) return `<span class="stock-val" style="background:#fef3c7;color:#92400e">${sv}</span>`;
     return `<span class="stock-val" style="background:#f3f4f6;color:#374151">${sv}</span>`;
   }
+  const minStockMap = getMinStock();
+  const minVal = minStockMap[d.name] || '';
+  function minStockBadge(){
+    if(!minVal) return `<span class="stock-val" style="background:#f3f4f6;color:#9ca3af;cursor:pointer;min-width:34px" onclick="editMinStock(${JSON.stringify(d.name)},this)">-</span>`;
+    return `<span class="stock-val" style="background:#e0e7ff;color:#3730a3;cursor:pointer;min-width:34px" onclick="editMinStock(${JSON.stringify(d.name)},this)">${minVal}</span>`;
+  }
   function amBadge(unitVal){
     const key = unitVal ? d.name+'|'+unitVal : d.name;
     const amQty = amMap[key] || (!unitVal ? amMap[d.name] : null);
@@ -478,16 +484,39 @@ function makeRow(d, idx){
   return `<div class="drug-card${hasOrder?' has-order':''}" id="card${idx}">
     <div class="drug-card-name">${d.name}</div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap">
-      <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-        <span class="info-label">현재고</span>${stockBadge(stockVal)}
-        <span class="info-label" style="margin-left:3px">소모</span><span class="qty-badge">${d.qty}</span>
-        ${d.group===0 ? `<button class="btn btn-sm" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;font-size:11px;margin-left:4px" onclick="registerAsG1(${idx})">1군 등록</button>` : ''}
+      <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:5px">
+          <span class="info-label">현재고</span>${stockBadge(stockVal)}
+          <span class="info-label" style="margin-left:3px">소모</span><span class="qty-badge">${d.qty}</span>
+          ${d.group===0 ? `<button class="btn btn-sm" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;font-size:11px;margin-left:4px" onclick="registerAsG1(${idx})">1군 등록</button>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span class="info-label">최소필요량</span>${minStockBadge()}
+        </div>
       </div>
       <div style="flex:1;display:flex;justify-content:flex-end">
         <div class="drug-card-order">${orderSection}</div>
       </div>
     </div>
   </div>`;
+}
+
+function editMinStock(name, el){
+  const current = getMinStock()[name] || '';
+  const val = prompt(`${name.split('(')[0].trim()}\n최소필요량 입력 (빈칸=삭제):`, current);
+  if(val === null) return; // 취소
+  setMinStock(name, val.trim());
+  // 화면 갱신
+  const num = parseInt(val.trim())||0;
+  if(!val.trim()){
+    el.textContent = '-';
+    el.style.background = '#f3f4f6';
+    el.style.color = '#9ca3af';
+  } else {
+    el.textContent = num;
+    el.style.background = '#e0e7ff';
+    el.style.color = '#3730a3';
+  }
 }
 
 function updateCardStyle(idx){
@@ -738,6 +767,16 @@ function completeOrder(){
   switchTab(0);
   
 }
+// 최소필요량 저장/불러오기
+function getMinStock(){ try{ return JSON.parse(localStorage.getItem('min_stock')||'{}'); }catch(e){ return {}; } }
+function saveMinStock(map){ localStorage.setItem('min_stock', JSON.stringify(map)); }
+function setMinStock(name, val){
+  const map = getMinStock();
+  if(val) map[name] = parseInt(val)||0;
+  else delete map[name];
+  saveMinStock(map);
+}
+
 function getCustomG1(){ try{ return JSON.parse(localStorage.getItem('custom_g1')||'[]'); }catch(e){ return []; } }
 function saveCustomG1(list){ localStorage.setItem('custom_g1', JSON.stringify(list)); }
 
