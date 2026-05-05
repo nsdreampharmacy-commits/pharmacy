@@ -481,7 +481,7 @@ function makeRow(d,idx){
       ${amBadge(null)}
     </div>`;
   }
-  const g1Btn=d.group===0?`<button class="btn btn-sm" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;font-size:11px" onclick="registerAsG1(${idx})">1군 등록</button>`:'';
+  const g1Btn=d.group===0?`<button class="btn" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;font-size:13px;font-weight:700;height:44px;width:100%;margin-top:6px" onclick="registerAsG1(${idx})">⭐ 1군 등록</button>`:'';
   return `<div class="drug-card${hasOrder?' has-order':''}" id="card${idx}">
     <div class="drug-card-name">${d.name}</div>
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap">
@@ -489,7 +489,6 @@ function makeRow(d,idx){
         <div class="drug-card-info-row">
           <span class="info-label">현재고</span>${stockBadge}
           <span class="info-label" style="margin-left:3px">소모</span><span class="qty-badge">${d.qty}</span>
-          ${g1Btn}
         </div>
         <div class="drug-card-info-row">
           <span class="info-label">최소필요량</span>${minBadge}
@@ -499,6 +498,7 @@ function makeRow(d,idx){
         <div class="drug-card-order">${orderSection}</div>
       </div>
     </div>
+    ${g1Btn}
   </div>`;
 }
 
