@@ -794,19 +794,24 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbzpcJYiEXUY35FG4g6bEYHf
 
 async function gsGet(key){
   try{
-    const res = await fetch(`${GAS_URL}?action=get&key=${key}`);
+    const res = await fetch(`${GAS_URL}?action=get&key=${encodeURIComponent(key)}`, {mode:'cors'});
+    if(!res.ok) return null;
     const text = await res.text();
+    if(!text || text==='{}') return null;
     return JSON.parse(text);
   }catch(e){ return null; }
 }
 
-async function gsSet(key, value){
+function gsSet(key, value){
+  // fire-and-forget: 오류가 나도 앱 동작에 영향 없음
   try{
-    await fetch(GAS_URL, {
+    fetch(GAS_URL, {
       method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
       body: JSON.stringify({action:'set', key, value: JSON.stringify(value)})
-    });
-  }catch(e){ console.error('gsSet error', e); }
+    }).catch(()=>{});
+  }catch(e){}
 }
 
 // 최소필요량 저장/불러오기
