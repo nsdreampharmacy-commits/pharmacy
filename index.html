@@ -318,6 +318,7 @@ function updateClock(){
   if(tb){ tb.textContent = h < 14 ? '오전 주문' : '오후 주문'; tb.className = 'time-badge '+(h<14?'am-badge':'pm-badge'); }
 }
 setInterval(updateClock, 1000); updateClock();
+syncFromCloud().then(()=>{ updateLastOrderBtn(); renderCustomG1List(); });
 
 // 최소필요량 클릭 이벤트 위임
 document.addEventListener('click', function(e){
@@ -584,7 +585,7 @@ function renderG2(filter=''){
 }
 // 직전 주문서 저장/불러오기
 function getLastOrder(){ try{ return JSON.parse(localStorage.getItem('last_order')||'null'); }catch(e){ return null; } }
-function saveLastOrder(data){ localStorage.setItem('last_order', JSON.stringify(data)); }
+function saveLastOrder(data){ localStorage.setItem('last_order', JSON.stringify(data)); gsSet('last_order', data); }
 function updateLastOrderBtn(){
   const data = getLastOrder();
   const btn = document.getElementById('last-order-btn');
@@ -671,7 +672,7 @@ function printLastOrder(){
   window.print();
 }
 function getAmOrder(){ try{ return JSON.parse(localStorage.getItem('am_order')||'{}'); }catch(e){ return {}; } }
-function saveAmOrder(map){ localStorage.setItem('am_order', JSON.stringify(map)); }
+function saveAmOrder(map){ localStorage.setItem('am_order', JSON.stringify(map)); gsSet('am_order', map); }
 function clearAmOrder(){ localStorage.removeItem('am_order'); }
 
 function printAndComplete(){
@@ -788,18 +789,52 @@ function completeOrder(){
   switchTab(0);
   
 }
+// Google Sheets 연동
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzpcJYiEXUY35FG4g6bEYHfffTojI3xtnUze_MwBgGOZ3PAApI_euAWT7-IDz4DMH5aDQ/exec';
+
+async function gsGet(key){
+  try{
+    const res = await fetch(`${GAS_URL}?action=get&key=${key}`);
+    const text = await res.text();
+    return JSON.parse(text);
+  }catch(e){ return null; }
+}
+
+async function gsSet(key, value){
+  try{
+    await fetch(GAS_URL, {
+      method:'POST',
+      body: JSON.stringify({action:'set', key, value: JSON.stringify(value)})
+    });
+  }catch(e){ console.error('gsSet error', e); }
+}
+
 // 최소필요량 저장/불러오기
 function getMinStock(){ try{ return JSON.parse(localStorage.getItem('min_stock')||'{}'); }catch(e){ return {}; } }
-function saveMinStock(map){ localStorage.setItem('min_stock', JSON.stringify(map)); }
+function saveMinStock(map){
+  localStorage.setItem('min_stock', JSON.stringify(map));
+  gsSet('min_stock', map);
+}
 function setMinStock(name, val){
   const map = getMinStock();
   if(val) map[name] = parseInt(val)||0;
   else delete map[name];
   saveMinStock(map);
 }
+async function syncFromCloud(){
+  // 클라우드에서 최신 데이터 불러와서 로컬에 동기화
+  const minStock = await gsGet('min_stock');
+  if(minStock) localStorage.setItem('min_stock', JSON.stringify(minStock));
+  const customG1 = await gsGet('custom_g1');
+  if(customG1) localStorage.setItem('custom_g1', JSON.stringify(customG1));
+  const lastOrder = await gsGet('last_order');
+  if(lastOrder) localStorage.setItem('last_order', JSON.stringify(lastOrder));
+  const amOrder = await gsGet('am_order');
+  if(amOrder) localStorage.setItem('am_order', JSON.stringify(amOrder));
+}
 
 function getCustomG1(){ try{ return JSON.parse(localStorage.getItem('custom_g1')||'[]'); }catch(e){ return []; } }
-function saveCustomG1(list){ localStorage.setItem('custom_g1', JSON.stringify(list)); }
+function saveCustomG1(list){ localStorage.setItem('custom_g1', JSON.stringify(list)); gsSet('custom_g1', list); }
 
 function registerAsG1(idx){
   const d = drugs[idx];
