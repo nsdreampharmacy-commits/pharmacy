@@ -287,13 +287,12 @@ let currentGroup=1;
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxFxGewnb0AHMWqEZnV3ER3QGOs2V3fiDOKHYS9j76KtpM5VIW5Ih_zLOMBNHcqVBa_tQ/exec';
 
 function cloudSave(key, value){
-  // fire-and-forget: 실패해도 무시
   try{
-    const fd = new FormData();
-    fd.append('action', 'set');
-    fd.append('key', key);
-    fd.append('value', JSON.stringify(value));
-    fetch(GAS_URL, {method:'POST', body: fd}).catch(()=>{});
+    fetch(GAS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'set', key:key, value:JSON.stringify(value)})
+    }).catch(()=>{});
   }catch(e){}
 }
 
