@@ -448,8 +448,8 @@ function makeRow(d, idx){
   const minStockMap = getMinStock();
   const minVal = minStockMap[d.name] || '';
   function minStockBadge(){
-    if(!minVal) return `<span class="stock-val" style="background:#f3f4f6;color:#9ca3af;cursor:pointer;min-width:34px" onclick="editMinStock(${JSON.stringify(d.name)},this)">-</span>`;
-    return `<span class="stock-val" style="background:#e0e7ff;color:#3730a3;cursor:pointer;min-width:34px" onclick="editMinStock(${JSON.stringify(d.name)},this)">${minVal}</span>`;
+    if(!minVal) return `<span class="stock-val" style="background:#f3f4f6;color:#9ca3af;cursor:pointer;min-width:34px" onclick="editMinStock(${idx},this)">-</span>`;
+    return `<span class="stock-val" style="background:#e0e7ff;color:#3730a3;cursor:pointer;min-width:34px" onclick="editMinStock(${idx},this)">${minVal}</span>`;
   }
   function amBadge(unitVal){
     const key = unitVal ? d.name+'|'+unitVal : d.name;
@@ -502,12 +502,13 @@ function makeRow(d, idx){
   </div>`;
 }
 
-function editMinStock(name, el){
-  const current = getMinStock()[name] || '';
-  const val = prompt(`${name.split('(')[0].trim()}\n최소필요량 입력 (빈칸=삭제):`, current);
-  if(val === null) return; // 취소
-  setMinStock(name, val.trim());
-  // 화면 갱신
+function editMinStock(idx, el){
+  const d = drugs[idx];
+  if(!d) return;
+  const current = getMinStock()[d.name] || '';
+  const val = prompt(d.name.split('(')[0].trim() + '\n최소필요량 입력 (빈칸=삭제):', current);
+  if(val === null) return;
+  setMinStock(d.name, val.trim());
   const num = parseInt(val.trim())||0;
   if(!val.trim()){
     el.textContent = '-';
