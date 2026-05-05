@@ -283,15 +283,64 @@ let orderTime='AM';
 let currentGroup=1;
 
 // 로컬스토리지
+// ===== 클라우드 동기화 (백그라운드, 앱 동작에 영향 없음) =====
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzpcJYiEXUY35FG4g6bEYHfffTojI3xtnUze_MwBgGOZ3PAApI_euAWT7-IDz4DMH5aDQ/exec';
+
+function cloudSave(key, value){
+  // fire-and-forget: 실패해도 무시
+  try{
+    const fd = new FormData();
+    fd.append('action', 'set');
+    fd.append('key', key);
+    fd.append('value', JSON.stringify(value));
+    fetch(GAS_URL, {method:'POST', body: fd}).catch(()=>{});
+  }catch(e){}
+}
+
+async function cloudLoad(key){
+  try{
+    const res = await fetch(GAS_URL + '?action=get&key=' + encodeURIComponent(key), {cache:'no-cache'});
+    const text = await res.text();
+    if(!text || text === '{}' || text === 'null') return null;
+    return JSON.parse(text);
+  }catch(e){ return null; }
+}
+
+async function syncFromCloud(){
+  try{
+    // 최소필요량
+    const ms = await cloudLoad('min_stock');
+    if(ms && typeof ms === 'object' && Object.keys(ms).length > 0){
+      const local = getMinStock();
+      const merged = {...ms, ...local}; // 로컬 우선
+      localStorage.setItem('min_stock', JSON.stringify(merged));
+    }
+    // 1군 추가 등록
+    const cg = await cloudLoad('custom_g1');
+    if(cg && Array.isArray(cg) && cg.length > 0){
+      const localCg = getCustomG1();
+      if(localCg.length === 0) localStorage.setItem('custom_g1', JSON.stringify(cg));
+    }
+    // 직전 주문서
+    const lo = await cloudLoad('last_order');
+    if(lo && lo.items){ const local = getLastOrder(); if(!local) localStorage.setItem('last_order', JSON.stringify(lo)); }
+    // 오전 주문
+    const ao = await cloudLoad('am_order');
+    if(ao && typeof ao === 'object'){ const local = getAmOrder(); if(Object.keys(local).length === 0) localStorage.setItem('am_order', JSON.stringify(ao)); }
+    updateLastOrderBtn();
+  }catch(e){}
+}
+// ===== 클라우드 동기화 끝 =====
+
 function getMinStock(){ try{ return JSON.parse(localStorage.getItem('min_stock')||'{}'); }catch(e){ return {}; } }
-function saveMinStock(map){ localStorage.setItem('min_stock', JSON.stringify(map)); }
+function saveMinStock(map){ localStorage.setItem('min_stock', JSON.stringify(map)); cloudSave('min_stock', map); }
 function setMinStock(name, val){ const map=getMinStock(); if(val) map[name]=parseInt(val)||0; else delete map[name]; saveMinStock(map); }
 function getCustomG1(){ try{ return JSON.parse(localStorage.getItem('custom_g1')||'[]'); }catch(e){ return []; } }
-function saveCustomG1(list){ localStorage.setItem('custom_g1', JSON.stringify(list)); }
+function saveCustomG1(list){ localStorage.setItem('custom_g1', JSON.stringify(list)); cloudSave('custom_g1', list); }
 function getLastOrder(){ try{ return JSON.parse(localStorage.getItem('last_order')||'null'); }catch(e){ return null; } }
-function saveLastOrder(data){ localStorage.setItem('last_order', JSON.stringify(data)); }
+function saveLastOrder(data){ localStorage.setItem('last_order', JSON.stringify(data)); cloudSave('last_order', data); }
 function getAmOrder(){ try{ return JSON.parse(localStorage.getItem('am_order')||'{}'); }catch(e){ return {}; } }
-function saveAmOrder(map){ localStorage.setItem('am_order', JSON.stringify(map)); }
+function saveAmOrder(map){ localStorage.setItem('am_order', JSON.stringify(map)); cloudSave('am_order', map); }
 function clearAmOrder(){ localStorage.removeItem('am_order'); }
 
 function normalize(name){ return String(name).split('(')[0].trim().split('_')[0].trim(); }
@@ -323,6 +372,8 @@ function updateClock(){
 }
 setInterval(updateClock,1000); updateClock();
 updateLastOrderBtn();
+// 백그라운드 클라우드 동기화
+setTimeout(()=>{ syncFromCloud(); }, 1000);
 
 // 당겨서 새로고침 방지
 let lastY=0;
