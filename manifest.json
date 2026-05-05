@@ -1,0 +1,15 @@
+{
+  "name": "논산드림약국 주문관리",
+  "short_name": "드림약국",
+  "display": "standalone",
+  "background_color": "#1565c0",
+  "theme_color": "#1565c0",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2838/2838895.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
