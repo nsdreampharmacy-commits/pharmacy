@@ -859,6 +859,7 @@ function renderNew(filter=''){
 function filterG1(q){ renderG1(q); }
 function filterG2(q){ renderG2(q); }
 function clearGroup(g){
+  if(!confirm('입력한 주문수량을 모두 초기화할까요?')) return;
   drugs.filter(d=>d.group===g||g===9&&d.group===0).forEach(d=>{d.orderQty=0;d.orderQtyArr=[0,0];d.memo='';});
   if(g===1) renderG1();
   else if(g===2) renderG2();
