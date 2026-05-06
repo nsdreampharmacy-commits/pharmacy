@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="1778076114">
+<meta name="version" content="1778076447">
 <link rel="manifest" href="/pharmacy/manifest.json">
 <title>논산드림약국 주문관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -752,8 +752,8 @@ function printOrder(){
       return `<tr style="${boldTop}">
         <td style="padding:2px 4px;font-size:10px;text-align:center">${i+1}</td>
         <td style="padding:2px 4px;font-size:10px;word-break:break-all">${shortName(d.name)}</td>
-        <td style="padding:2px 4px;font-size:10px;text-align:center;font-weight:700">${d.unitVal||'-'}</td>
         <td style="padding:2px 4px;font-size:10px;text-align:center;font-weight:700">${d.orderQty}</td>
+        <td style="padding:2px 4px;font-size:10px;text-align:center;font-weight:700">${d.unitVal||'-'}</td>
       </tr>`;
     }).join('');
   }
@@ -766,8 +766,8 @@ function printOrder(){
         <thead><tr style="background:#f8faff">
           <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
           <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
-          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
           <th style="padding:2px 4px;font-size:10px;width:10%;border:1px solid #999">수량</th>
+          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
         </tr></thead>
         <tbody style="border:1px solid #999">${makeRows(d1)}</tbody>
       </table>
@@ -780,8 +780,8 @@ function printOrder(){
         <thead><tr style="background:#f8faff">
           <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
           <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
-          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
           <th style="padding:2px 4px;font-size:10px;width:10%;border:1px solid #999">수량</th>
+          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
         </tr></thead>
         <tbody>${makeRows(d2)}</tbody>
       </table>
@@ -794,8 +794,8 @@ function printOrder(){
         <thead><tr style="background:#f8faff">
           <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
           <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
-          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
           <th style="padding:2px 4px;font-size:10px;width:10%;border:1px solid #999">수량</th>
+          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
         </tr></thead>
         <tbody>${makeRows(d3)}</tbody>
       </table>
