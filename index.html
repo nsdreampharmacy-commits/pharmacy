@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="1778128984">
+<meta name="version" content="1778130213">
 <link rel="manifest" href="/pharmacy/manifest.json">
 <title>논산드림약국 주문관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -371,12 +371,12 @@ function updateClock(){
   const now=new Date();
   const h=now.getHours(), m=String(now.getMinutes()).padStart(2,'0'), s=String(now.getSeconds()).padStart(2,'0');
   document.getElementById('clock').textContent=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${String(h).padStart(2,'0')}:${m}:${s}`;
-  orderTime=h<14?'AM':'PM';
+  orderTime=h<12?'AM':'PM';
   const badge=document.getElementById('order-badge');
-  badge.textContent=h<14?'🌅 오전 주문':'🌆 오후 주문';
-  badge.style.cssText=h<14?'background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700':'background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700';
+  badge.textContent=h<12?'🌅 오전 주문':'🌆 오후 주문';
+  badge.style.cssText=h<12?'background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700':'background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700';
   const tb=document.getElementById('g1-time-badge');
-  if(tb){ tb.textContent=h<14?'오전 주문':'오후 주문'; tb.className='time-badge '+(h<14?'am-badge':'pm-badge'); }
+  if(tb){ tb.textContent=h<12?'오전 주문':'오후 주문'; tb.className='time-badge '+(h<12?'am-badge':'pm-badge'); }
 }
 setInterval(updateClock,1000); updateClock();
 updateLastOrderBtn();
