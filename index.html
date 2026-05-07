@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="1778130213">
+<meta name="version" content="1778130536">
 <link rel="manifest" href="/pharmacy/manifest.json">
 <title>논산드림약국 주문관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -767,10 +767,10 @@ function printOrder(){
     return list.map((d,i)=>{
       const boldTop=(i>0&&i%5===0)?'border-top:2.5px solid #000;':'';
       return `<tr style="${boldTop}">
-        <td style="padding:2px 4px;font-size:10px;text-align:center">${i+1}</td>
-        <td style="padding:2px 4px;font-size:10px;word-break:break-all">${shortName(d.name)}</td>
-        <td style="padding:2px 4px;font-size:10px;text-align:center;font-weight:700">${d.orderQty}</td>
-        <td style="padding:2px 4px;font-size:10px;text-align:center;font-weight:700">${d.unitVal||'-'}</td>
+        <td style="padding:1px 2px;font-size:9px;text-align:center;width:5%">${i+1}</td>
+        <td style="padding:1px 3px;font-size:9px;word-break:break-all;width:65%">${shortName(d.name)}</td>
+        <td style="padding:1px 2px;font-size:9px;text-align:center;font-weight:700;width:12%">${d.orderQty}</td>
+        <td style="padding:1px 2px;font-size:9px;text-align:center;color:#555;width:18%">${d.unitVal||'-'}</td>
       </tr>`;
     }).join('');
   }
@@ -779,7 +779,8 @@ function printOrder(){
   if(d1.length){
     content+=`<div style="break-inside:avoid-column">
       <div style="background:#e8f0fe;color:#1565c0;font-weight:700;padding:4px 6px;font-size:11px;margin-bottom:2px">▶ 대성팜 (${d1.length}품목)</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #999">
+      <table style="width:100%;border-collapse:collapse;border:1px solid #999;table-layout:fixed">
+        <colgroup><col style="width:5%"><col style="width:65%"><col style="width:12%"><col style="width:18%"></colgroup>
         <thead><tr style="background:#f8faff">
           <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
           <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
@@ -793,7 +794,8 @@ function printOrder(){
   if(d2.length){
     content+=`<div style="break-inside:avoid-column;margin-top:10px">
       <div style="background:#e8f5e9;color:#2e7d32;font-weight:700;padding:4px 6px;font-size:11px;margin-bottom:2px">▶ 백제약품 (${d2.length}품목)</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #999">
+      <table style="width:100%;border-collapse:collapse;border:1px solid #999;table-layout:fixed">
+        <colgroup><col style="width:5%"><col style="width:65%"><col style="width:12%"><col style="width:18%"></colgroup>
         <thead><tr style="background:#f8faff">
           <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
           <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
@@ -807,7 +809,8 @@ function printOrder(){
   if(d3.length){
     content+=`<div style="break-inside:avoid-column;margin-top:10px">
       <div style="background:#f3e5f5;color:#6a1b9a;font-weight:700;padding:4px 6px;font-size:11px;margin-bottom:2px">▶ 대전지오영 (${d3.length}품목)</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #999">
+      <table style="width:100%;border-collapse:collapse;border:1px solid #999;table-layout:fixed">
+        <colgroup><col style="width:5%"><col style="width:65%"><col style="width:12%"><col style="width:18%"></colgroup>
         <thead><tr style="background:#f8faff">
           <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
           <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
@@ -872,6 +875,32 @@ function printLastOrder(){
       <tbody>${rows}</tbody>
     </table>`;
   window.print();
+}
+
+function renderLastOrder(){
+  const data=getLastOrder();
+  document.getElementById('last-nodata').style.display=data?'none':'block';
+  document.getElementById('last-data').style.display=data?'block':'none';
+  if(!data) return;
+  const badge=document.getElementById('last-date-badge');
+  badge.textContent=`${data.dateStr} ${data.timeStr||''}`;
+  badge.className='time-badge '+(data.dateStr.includes('오전')?'am-badge':'pm-badge');
+  document.getElementById('last-total').textContent=data.items.length;
+  const d1=data.items.filter(d=>getSupplier(d.maker,d.name)==='대성팜');
+  const d2=data.items.filter(d=>getSupplier(d.maker,d.name)==='백제약품');
+  const d3=data.items.filter(d=>getSupplier(d.maker,d.name)==='대전지오영');
+  let num=1,rows='';
+  if(d1.length){ rows+=`<tr><td colspan="4" style="background:#eff6ff;color:#1565c0;font-weight:700;padding:6px 7px;font-size:12px">🏪 대성팜 (${d1.length}품목)</td></tr>`; d1.forEach(d=>{rows+=`<tr><td style="text-align:center;color:#9ca3af;font-size:11px">${num++}</td><td class="drug-name">${shortName(d.name)}</td><td style="text-align:center;font-weight:800;color:#dc2626">${d.orderQty}</td><td style="text-align:center;font-weight:700;color:#1565c0">${d.unitVal||'-'}</td></tr>`;}); }
+  if(d2.length){ rows+=`<tr><td colspan="4" style="background:#f0fdf4;color:#16a34a;font-weight:700;padding:6px 7px;font-size:12px">🏪 백제약품 (${d2.length}품목)</td></tr>`; d2.forEach(d=>{rows+=`<tr><td style="text-align:center;color:#9ca3af;font-size:11px">${num++}</td><td class="drug-name">${shortName(d.name)}</td><td style="text-align:center;font-weight:800;color:#dc2626">${d.orderQty}</td><td style="text-align:center;font-weight:700;color:#1565c0">${d.unitVal||'-'}</td></tr>`;}); }
+  if(d3.length){ rows+=`<tr><td colspan="4" style="background:#fdf4ff;color:#7e22ce;font-weight:700;padding:6px 7px;font-size:12px">🏪 대전지오영 (${d3.length}품목)</td></tr>`; d3.forEach(d=>{rows+=`<tr><td style="text-align:center;color:#9ca3af;font-size:11px">${num++}</td><td class="drug-name">${shortName(d.name)}</td><td style="text-align:center;font-weight:800;color:#dc2626">${d.orderQty}</td><td style="text-align:center;font-weight:700;color:#1565c0">${d.unitVal||'-'}</td></tr>`;}); }
+  document.getElementById('last-tbody').innerHTML=rows;
+}
+
+function clearLastOrder(){
+  if(!confirm('직전 주문서를 삭제할까요?')) return;
+  localStorage.removeItem('last_order');
+  renderLastOrder();
+  updateLastOrderBtn();
 }
 
 function switchTab(idx){
