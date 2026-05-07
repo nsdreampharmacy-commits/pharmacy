@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="1778128454">
+<meta name="version" content="1778128984">
 <link rel="manifest" href="/pharmacy/manifest.json">
 <title>논산드림약국 주문관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -85,10 +85,12 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
 @media print{
 *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 body>*{display:none!important}
-.print-area{display:block!important;position:fixed;top:0;left:0;width:100%;padding:10px 15px;box-sizing:border-box}
-.print-header{margin-bottom:6px;border-bottom:2px solid #000;padding-bottom:4px}
+.print-area{display:block!important;width:100%;padding:8px 12px;box-sizing:border-box}
+.print-header{margin-bottom:5px;border-bottom:2px solid #000;padding-bottom:3px}
 .print-header h2{font-size:13px;margin-bottom:2px}
 .print-header p{font-size:10px;color:#555}
+table{border-collapse:collapse!important}
+td,th{border:1px solid #999!important}
 }
 </style>
 </head>
@@ -756,7 +758,7 @@ function completeOrder(){
 function printOrder(){
   const ordered=window._orderedList||getOrderedList();
   const now=new Date();
-  const ds=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
+  const ds=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const d1=ordered.filter(d=>getSupplier(d.maker,d.name)==='대성팜');
   const d2=ordered.filter(d=>getSupplier(d.maker,d.name)==='백제약품');
   const d3=ordered.filter(d=>getSupplier(d.maker,d.name)==='대전지오영');
