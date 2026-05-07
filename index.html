@@ -9,13 +9,13 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="1778076447">
+<meta name="version" content="1778128454">
 <link rel="manifest" href="/pharmacy/manifest.json">
 <title>논산드림약국 주문관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'맑은 고딕',sans-serif;background:#f0f2f5;font-size:14px;color:#1a1a2e;overscroll-behavior-y:contain}
+body{font-family:'맑은 고딕',sans-serif;background:#f0f2f5;font-size:14px;color:#1a1a2e;overscroll-behavior-y:none}
 header{background:linear-gradient(135deg,#1565c0,#0d47a1);color:white;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
 .header-left{display:flex;align-items:center;gap:8px}
 header h1{font-size:15px;font-weight:700}
@@ -58,7 +58,7 @@ header h1{font-size:15px;font-weight:700}
 .drug-card-order-row{display:flex;gap:8px;align-items:center}
 .qty-badge{display:inline-flex;align-items:center;background:#dbeafe;color:#1e40af;padding:3px 9px;border-radius:5px;font-weight:700;font-size:12px;min-width:34px;justify-content:center}
 .stock-val{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-weight:700;font-size:12px;background:#f3f4f6;min-width:34px;justify-content:center}
-.min-stock-btn{cursor:pointer}
+.min-stock-btn{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,0.1)}
 .order-input{width:68px;height:46px;border:1.5px solid #d1d5db;border-radius:8px;padding:0 6px;font-size:20px;text-align:center;font-weight:700;touch-action:manipulation}
 .order-input:focus{outline:none;border-color:#1565c0}
 .order-input.filled{border-color:#16a34a;background:#f0fdf4;color:#15803d}
@@ -335,6 +335,14 @@ function saveMinStock(map){ localStorage.setItem('min_stock', JSON.stringify(map
 function setMinStock(name, val){ const map=getMinStock(); if(val) map[name]=parseInt(val)||0; else delete map[name]; saveMinStock(map); }
 function getCustomG1(){ try{ return JSON.parse(localStorage.getItem('custom_g1')||'[]'); }catch(e){ return []; } }
 function saveCustomG1(list){ localStorage.setItem('custom_g1', JSON.stringify(list)); cloudSave('custom_g1', list); }
+function updateLastOrderBtn(){
+  const data=getLastOrder();
+  const btn=document.getElementById('last-order-btn');
+  const info=document.getElementById('last-order-info');
+  if(data){ btn.style.display='block'; info.textContent=`${data.dateStr} ${data.timeStr||''} · ${data.items.length}품목`; }
+  else btn.style.display='none';
+}
+
 function getLastOrder(){ try{ return JSON.parse(localStorage.getItem('last_order')||'null'); }catch(e){ return null; } }
 function saveLastOrder(data){ localStorage.setItem('last_order', JSON.stringify(data)); cloudSave('last_order', data); }
 function getAmOrder(){ try{ return JSON.parse(localStorage.getItem('am_order')||'{}'); }catch(e){ return {}; } }
@@ -375,11 +383,18 @@ setTimeout(()=>{ syncFromCloud(); }, 1000);
 
 // 당겨서 새로고침 방지
 let lastY=0;
-document.addEventListener('touchstart',e=>{lastY=e.touches[0].clientY;},{passive:true});
+let startY=0;
+document.addEventListener('touchstart',e=>{
+  lastY=e.touches[0].clientY;
+  startY=e.touches[0].clientY;
+},{passive:true});
 document.addEventListener('touchmove',e=>{
   const y=e.touches[0].clientY;
   const st=document.documentElement.scrollTop||document.body.scrollTop;
-  if(st===0&&y>lastY) e.preventDefault();
+  // 최상단에서 아래로 당기면 새로고침 방지
+  if(st<=0 && y>startY){
+    e.preventDefault();
+  }
   lastY=y;
 },{passive:false});
 
