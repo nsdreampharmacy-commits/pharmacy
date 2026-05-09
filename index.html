@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="1778130536">
+<meta name="version" content="1778313147">
 <link rel="manifest" href="/pharmacy/manifest.json">
 <title>논산드림약국 주문관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -724,8 +724,17 @@ function closeModal(){ const m=document.getElementById('complete-modal'); if(m) 
 
 function printAndComplete(){
   closeModal();
+  // 인쇄 전에 직전 주문서 먼저 저장
+  const now=new Date();
+  const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
+  const timeStr=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 완료`;
+  const lastItems=getOrderedList();
+  if(lastItems.length>0){ saveLastOrder({dateStr,timeStr,items:lastItems}); updateLastOrderBtn(); }
+  // 인쇄
   printOrder();
+  // 인쇄 후 완료 (취소해도 3초 후 자동)
   window.onafterprint=function(){ window.onafterprint=null; completeOrder(); };
+  setTimeout(()=>{ if(window.onafterprint){ window.onafterprint=null; completeOrder(); } }, 3000);
 }
 
 function completeOrder(){
