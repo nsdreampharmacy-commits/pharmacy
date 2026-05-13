@@ -472,8 +472,13 @@ function makeRow(d,idx){
   const amMap=getAmOrder();
   function amBadge(unitVal){
     const key=unitVal?d.name+'|'+unitVal:d.name;
-    const amQty=amMap[key]||(!unitVal?amMap[d.name]:null);
-    return amQty?`<span class="am-tag">오전:${amQty}</span>`:'';
+    const entry=amMap[key]||(!unitVal?amMap[d.name]:null);
+    if(!entry) return '';
+    const qty=typeof entry==='object'?entry.qty:entry;
+    const supplier=typeof entry==='object'?entry.supplier:'';
+    const abbr=supplier==='대성팜'?'대':supplier==='백제약품'?'백':supplier==='대전지오영'?'지':'';
+    const label=abbr?`${abbr}${qty}`:`오전:${qty}`;
+    return `<span class="am-tag">${label}</span>`;
   }
   const hasOrder=Array.isArray(unit)?(d.orderQtyArr&&(d.orderQtyArr[0]>0||d.orderQtyArr[1]>0)):d.orderQty>0;
   let orderSection='';
@@ -745,11 +750,12 @@ function completeOrder(){
   const lastItems=getOrderedList();
   if(lastItems.length>0){ saveLastOrder({dateStr,timeStr,items:lastItems}); updateLastOrderBtn(); }
   if(orderTime==='AM'){
-    const amMap={};
+    const amMap=getAmOrder();
     drugs.forEach(d=>{
       const norm=normalize(d.name); const unit=UNIT_MAP[d.name]||UNIT_MAP[norm];
-      if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0){amMap[d.name+'|'+u]=qty;} }); }
-      else { if(d.orderQty>0) amMap[d.name]=d.orderQty; }
+      const supplier=getSupplier(d.maker,d.name);
+      if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0){ const key=d.name+'|'+u; const prev=amMap[key]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[key]={qty:prevQty+qty,supplier}; } }); }
+      else { if(d.orderQty>0){ const prev=amMap[d.name]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[d.name]={qty:prevQty+d.orderQty,supplier}; } }
     });
     saveAmOrder(amMap);
   } else { clearAmOrder(); }
