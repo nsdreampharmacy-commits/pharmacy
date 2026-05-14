@@ -724,15 +724,18 @@ function makePrintHTML(items, titleLabel, dateStr, timeStr){
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;padding:8px 12px}
-h2{font-size:18px;margin-bottom:3px}
-.ph{font-size:14px;color:#555;padding-bottom:6px;border-bottom:2px solid #000;margin-bottom:10px}
+h2{font-size:18px;margin-bottom:2px}
+.ph{font-size:14px;color:#555;padding-bottom:6px;border-bottom:2px solid #000;margin-bottom:8px}
 .wrap{column-count:2;column-gap:14px;column-rule:1.5px solid #aaa}
-.sec{break-inside:avoid-column;margin-bottom:10px}
+.sec{break-inside:avoid;margin-bottom:8px}
 .sec-hd{font-size:14px;font-weight:700;padding:5px 8px;margin-bottom:2px}
 table{border-collapse:collapse;width:100%}
 td,th{border:1px solid #bbb;padding:4px 6px}
 th{background:#ebebeb;font-size:13px;text-align:center}
-@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{padding:5px 8px}}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{padding:5px 8px}
+}
 </style></head>
 <body>
 <h2>논산드림약국 주문서 (${titleLabel})</h2>
