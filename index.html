@@ -706,6 +706,42 @@ function rebuildOrderTable(){
 }
 
 // 완료 모달
+
+function makePrintHTML(items, titleLabel, dateStr, timeStr){
+  const d1=items.filter(d=>getSupplier(d.maker,d.name)==='대성팜');
+  const d2=items.filter(d=>getSupplier(d.maker,d.name)==='백제약품');
+  const d3=items.filter(d=>getSupplier(d.maker,d.name)==='대전지오영');
+  function makeSection(list,sTitle,color,bg){
+    if(!list.length) return '';
+    let rows='';
+    list.forEach((d,i)=>{
+      rows+=`<tr><td style="text-align:center;color:#888;font-size:13px">${i+1}</td><td style="font-size:15px;word-break:break-all">${shortName(d.name)}</td><td style="text-align:center;font-size:15px">${d.unitVal||'-'}</td><td style="text-align:center;font-size:17px">${d.orderQty}</td></tr>`;
+    });
+    return `<div class="sec"><div class="sec-hd" style="color:${color};background:${bg}">▶ ${sTitle} (${list.length}품목)</div><table><thead><tr><th style="width:5%">#</th><th>약품명</th><th style="width:18%">단위</th><th style="width:12%">수량</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  const body=makeSection(d1,'대성팜','#1565c0','#e8f0fe')+makeSection(d2,'백제약품','#2e7d32','#e8f5e9')+makeSection(d3,'대전지오영','#6a1b9a','#f3e5f5');
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>논산드림약국 주문서</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'맑은 고딕','Malgun Gothic',sans-serif;padding:8px 12px}
+h2{font-size:18px;margin-bottom:3px}
+.ph{font-size:14px;color:#555;padding-bottom:6px;border-bottom:2px solid #000;margin-bottom:10px}
+.wrap{column-count:2;column-gap:14px;column-rule:1.5px solid #aaa}
+.sec{break-inside:avoid-column;margin-bottom:10px}
+.sec-hd{font-size:14px;font-weight:700;padding:5px 8px;margin-bottom:2px}
+table{border-collapse:collapse;width:100%}
+td,th{border:1px solid #bbb;padding:4px 6px}
+th{background:#ebebeb;font-size:13px;text-align:center}
+@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{padding:5px 8px}}
+</style></head>
+<body>
+<h2>논산드림약국 주문서 (${titleLabel})</h2>
+<p class="ph">${dateStr} ${timeStr} · 총 ${items.length}품목 | 대성팜 ${d1.length} / 백제약품 ${d2.length} / 지오영 ${d3.length}</p>
+<div class="wrap">${body}</div>
+<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
+</body></html>`;
+}
+
 function showCompleteModal(){
   const ordered=getOrderedList();
   if(!ordered.length){ alert('주문수량을 입력한 약품이 없습니다.'); return; }
@@ -770,145 +806,21 @@ function completeOrder(){
 function printOrder(){
   const ordered=window._orderedList||getOrderedList();
   const now=new Date();
-  const ds=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  const d1=ordered.filter(d=>getSupplier(d.maker,d.name)==='대성팜');
-  const d2=ordered.filter(d=>getSupplier(d.maker,d.name)==='백제약품');
-  const d3=ordered.filter(d=>getSupplier(d.maker,d.name)==='대전지오영');
-
-  function makeRows(list){
-    return list.map((d,i)=>{
-      const boldTop=(i>0&&i%5===0)?'border-top:2.5px solid #000;':'';
-      return `<tr style="${boldTop}">
-        <td style="padding:1px 2px;font-size:9px;text-align:center;width:5%">${i+1}</td>
-        <td style="padding:1px 3px;font-size:9px;word-break:break-all;width:65%">${shortName(d.name)}</td>
-        <td style="padding:1px 2px;font-size:9px;text-align:center;font-weight:700;width:12%">${d.orderQty}</td>
-        <td style="padding:1px 2px;font-size:9px;text-align:center;color:#555;width:18%">${d.unitVal||'-'}</td>
-      </tr>`;
-    }).join('');
-  }
-
-  let content='';
-  if(d1.length){
-    content+=`<div style="break-inside:avoid-column">
-      <div style="background:#e8f0fe;color:#1565c0;font-weight:700;padding:4px 6px;font-size:11px;margin-bottom:2px">▶ 대성팜 (${d1.length}품목)</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #999;table-layout:fixed">
-        <colgroup><col style="width:5%"><col style="width:65%"><col style="width:12%"><col style="width:18%"></colgroup>
-        <thead><tr style="background:#f8faff">
-          <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
-          <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
-          <th style="padding:2px 4px;font-size:10px;width:10%;border:1px solid #999">수량</th>
-          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
-        </tr></thead>
-        <tbody style="border:1px solid #999">${makeRows(d1)}</tbody>
-      </table>
-    </div>`;
-  }
-  if(d2.length){
-    content+=`<div style="break-inside:avoid-column;margin-top:10px">
-      <div style="background:#e8f5e9;color:#2e7d32;font-weight:700;padding:4px 6px;font-size:11px;margin-bottom:2px">▶ 백제약품 (${d2.length}품목)</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #999;table-layout:fixed">
-        <colgroup><col style="width:5%"><col style="width:65%"><col style="width:12%"><col style="width:18%"></colgroup>
-        <thead><tr style="background:#f8faff">
-          <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
-          <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
-          <th style="padding:2px 4px;font-size:10px;width:10%;border:1px solid #999">수량</th>
-          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
-        </tr></thead>
-        <tbody>${makeRows(d2)}</tbody>
-      </table>
-    </div>`;
-  }
-  if(d3.length){
-    content+=`<div style="break-inside:avoid-column;margin-top:10px">
-      <div style="background:#f3e5f5;color:#6a1b9a;font-weight:700;padding:4px 6px;font-size:11px;margin-bottom:2px">▶ 대전지오영 (${d3.length}품목)</div>
-      <table style="width:100%;border-collapse:collapse;border:1px solid #999;table-layout:fixed">
-        <colgroup><col style="width:5%"><col style="width:65%"><col style="width:12%"><col style="width:18%"></colgroup>
-        <thead><tr style="background:#f8faff">
-          <th style="padding:2px 4px;font-size:10px;width:6%;border:1px solid #999">#</th>
-          <th style="padding:2px 4px;font-size:10px;border:1px solid #999">약품명</th>
-          <th style="padding:2px 4px;font-size:10px;width:10%;border:1px solid #999">수량</th>
-          <th style="padding:2px 4px;font-size:10px;width:14%;border:1px solid #999">단위</th>
-        </tr></thead>
-        <tbody>${makeRows(d3)}</tbody>
-      </table>
-    </div>`;
-  }
-
-  const orderTitle = orderTime==='AM' ? '오전 주문서' : '오후 주문서';
-  document.getElementById('print-area').innerHTML=`
-    <div class="print-header">
-      <h2>${orderTitle}</h2>
-      <p>${ds} · 총 ${ordered.length}품목</p>
-    </div>
-    <div style="column-count:2;column-gap:20px;column-rule:1px solid #ccc">
-      ${content}
-    </div>`;
-  window.print();
+  const ds=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
+  const ts=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const w=window.open('','_blank','width=860,height=950');
+  if(!w){alert('팝업 차단을 해제해주세요');return;}
+  w.document.write(makePrintHTML(ordered,orderTime==='AM'?'오전':'오후',ds,ts));
+  w.document.close();
 }
 
 
 
 function printLastOrder(){
   const data=getLastOrder(); if(!data) return;
-  const d1=data.items.filter(d=>getSupplier(d.maker,d.name)==='대성팜');
-  const d2=data.items.filter(d=>getSupplier(d.maker,d.name)==='백제약품');
-  const d3=data.items.filter(d=>getSupplier(d.maker,d.name)==='대전지오영');
-
-  function makeSection(list, title, color, bg){
-    if(!list.length) return '';
-    let rows = `<tr><td colspan="4" style="background:${bg};color:${color};font-weight:700;padding:5px 8px;font-size:12px">▶ ${title} (${list.length}품목)</td></tr>`;
-    list.forEach((d, i) => {
-      const boldTop = (i > 0 && i % 10 === 0) ? 'border-top:2.5px solid #000;' : '';
-      rows += `<tr>
-        <td style="font-size:11px;padding:3px 5px;text-align:center;${boldTop}">${i+1}</td>
-        <td style="font-size:11px;padding:3px 5px;word-break:break-all;${boldTop}">${shortName(d.name)}</td>
-        <td style="font-size:11px;padding:3px 5px;text-align:center;font-weight:700;${boldTop}">${d.unitVal||'-'}</td>
-        <td style="font-size:13px;padding:3px 5px;text-align:center;font-weight:800;${boldTop}">${d.orderQty}</td>
-      </tr>`;
-    });
-    return rows;
-  }
-
-  let rows = '';
-  rows += makeSection(d1, '대성팜', '#1565c0', '#e8f0fe');
-  rows += makeSection(d2, '백제약품', '#2e7d32', '#e8f5e9');
-  rows += makeSection(d3, '대전지오영', '#6a1b9a', '#f3e5f5');
-
-  const printHTML = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>논산드림약국 직전주문서</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'맑은 고딕',sans-serif;padding:10px 14px;font-size:12px}
-    h2{font-size:15px;font-weight:700;margin-bottom:3px}
-    .ph{font-size:11px;color:#555;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #000}
-    table{border-collapse:collapse;width:100%}
-    td,th{border:1px solid #aaa;padding:3px 5px}
-    th{background:#f0f0f0;font-weight:700;text-align:center;font-size:11px}
-    td:first-child{text-align:center;width:5%;color:#666}
-    td:nth-child(3){text-align:center;width:18%}
-    td:nth-child(4){text-align:center;width:12%;font-size:14px;font-weight:800}
-    @media print{
-      *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-      body{padding:6px 10px}
-    }
-  </style></head>
-  <body>
-  <h2>논산드림약국 주문서 (직전)</h2>
-  <p class="ph">${data.dateStr} ${data.timeStr||''} &nbsp;·&nbsp; 총 ${data.items.length}품목 &nbsp;|&nbsp; 대성팜 ${d1.length} / 백제약품 ${d2.length} / 지오영 ${d3.length}</p>
-  <table>
-    <thead><tr>
-      <th style="width:5%">#</th>
-      <th style="width:58%">약품명</th>
-      <th style="width:20%">단위</th>
-      <th style="width:17%">수량</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
-  <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
-  </body></html>`;
-
-  const w=window.open('','_blank','width=800,height=900');
+  const w=window.open('','_blank','width=860,height=950');
   if(!w){alert('팝업 차단을 해제해주세요');return;}
-  w.document.write(printHTML);
+  w.document.write(makePrintHTML(data.items,'직전',data.dateStr,data.timeStr||''));
   w.document.close();
 }
 
