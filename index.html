@@ -750,8 +750,8 @@ function printAndComplete(){
     const pmOnly=history.filter(o=>o.isPM);
     saveOrderHistory(pmOnly);
   }
-  // 인쇄
   window._printCompleting=true;
+  // 인쇄
   printOrder();
   // 인쇄 후 완료 (취소해도 3초 후 자동)
   window.onafterprint=function(){ window.onafterprint=null; completeOrder(); };
@@ -764,25 +764,19 @@ function completeOrder(){
   const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
   const timeStr=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 완료`;
   const lastItems=getOrderedList();
-  if(lastItems.length>0 && !window._printCompleting){
-    addOrderHistory({dateStr,timeStr,items:lastItems,isPM:orderTime==='PM'}); updateLastOrderBtn();
-    if(orderTime==='AM'){
-      const amMap=getAmOrder();
-      drugs.forEach(d=>{
-        const norm=normalize(d.name); const unit=UNIT_MAP[d.name]||UNIT_MAP[norm];
-        const supplier=getSupplier(d.maker,d.name);
-        if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0){ const key=d.name+'|'+u; const prev=amMap[key]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[key]={qty:prevQty+qty,supplier}; } }); }
-        else { if(d.orderQty>0){ const prev=amMap[d.name]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[d.name]={qty:prevQty+d.orderQty,supplier}; } }
-      });
-      saveAmOrder(amMap);
-    } else {
-      clearAmOrder();
-      const history=getOrderHistory();
-      const pmOnly=history.filter(o=>o.isPM);
-      saveOrderHistory(pmOnly);
-    }
-  }
+  if(lastItems.length>0 && !window._printCompleting){ addOrderHistory({dateStr,timeStr,items:lastItems,isPM:orderTime==='PM'}); updateLastOrderBtn(); }
   window._printCompleting=false;
+  if(orderTime==='AM'){
+    const amMap=getAmOrder();
+    drugs.forEach(d=>{
+      const norm=normalize(d.name); const unit=UNIT_MAP[d.name]||UNIT_MAP[norm];
+      const supplier=getSupplier(d.maker,d.name);
+      if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0){ const key=d.name+'|'+u; const prev=amMap[key]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[key]={qty:prevQty+qty,supplier}; } }); }
+      else { if(d.orderQty>0){ const prev=amMap[d.name]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[d.name]={qty:prevQty+d.orderQty,supplier}; } }
+    });
+    saveAmOrder(amMap);
+  } else { clearAmOrder(); }
+  drugs=[];
   document.getElementById('upload-result').style.display='none';
   document.getElementById('ord-nodata').style.display='block';
   document.getElementById('ord-data').style.display='none';
@@ -903,8 +897,8 @@ function printLastOrder(){
     <div class="print-header"><h2>${titleText2}</h2><p>${data.dateStr} ${data.timeStr||''} · 총 ${data.items.length}품목</p></div>
     <table class="ptable" style="table-layout:fixed;width:100%">
       <colgroup>
-        <col style="width:3%"><col style="width:28%"><col style="width:6%"><col style="width:6%">
-        <col style="width:3%"><col style="width:28%"><col style="width:6%"><col style="width:6%">
+        <col style="width:2%"><col style="width:32%"><col style="width:5%"><col style="width:5%">
+        <col style="width:2%"><col style="width:32%"><col style="width:5%"><col style="width:5%">
       </colgroup>
       <thead><tr>
         <th style="font-size:15px">#</th><th style="font-size:15px">약품명</th><th style="font-size:15px">단위</th><th style="font-size:15px">수량</th>
