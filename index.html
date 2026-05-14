@@ -318,22 +318,18 @@ function setMinStock(name, val){ const map=getMinStock(); if(val) map[name]=pars
 function getCustomG1(){ try{ return JSON.parse(localStorage.getItem('custom_g1')||'[]'); }catch(e){ return []; } }
 function saveCustomG1(list){ localStorage.setItem('custom_g1', JSON.stringify(list)); cloudSave('custom_g1', list); }
 function updateLastOrderBtn(){
-  const list=getOrderHistory?getOrderHistory():[];
+  cleanupOrderHistory();
+  const list=getOrderHistory();
   const btn=document.getElementById('last-order-btn');
   const info=document.getElementById('last-order-info');
-  if(list.length>0){
-    btn.style.display='block';
-    const total=list.reduce((s,o)=>s+(o.items?o.items.length:0),0);
-    info.textContent=list.length+'건 '+total+'품목';
-  } else btn.style.display='none';
+  if(list.length>0){ btn.style.display='block'; const total=list.reduce((s,o)=>s+(o.items?o.items.length:0),0); info.textContent=list.length+'건 '+total+'품목'; }
+  else btn.style.display='none';
 }
 
-// ===== 직전 주문서 누적 저장 =====
 function getOrderHistory(){ try{ return JSON.parse(localStorage.getItem('order_history')||'[]'); }catch(e){ return []; } }
 function saveOrderHistory(list){ localStorage.setItem('order_history', JSON.stringify(list)); cloudSave('order_history', list); }
 function cleanupOrderHistory(){
-  const list=getOrderHistory();
-  const now=new Date();
+  const list=getOrderHistory(); const now=new Date();
   const todayStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
   const filtered=list.filter(item=>item.isPM?item.dateStr&&item.dateStr.startsWith(todayStr):true);
   if(filtered.length!==list.length) saveOrderHistory(filtered);
@@ -539,9 +535,7 @@ function setOrder(idx,val){ if(drugs[idx]) drugs[idx].orderQty=parseInt(val)||0;
 function setOrderArr(idx,ui,val){ if(!drugs[idx].orderQtyArr) drugs[idx].orderQtyArr=[0,0]; drugs[idx].orderQtyArr[ui]=parseInt(val)||0; }
 
 function getStockPriority(d){
-  const sv=d.stock;
-  const minMap=getMinStock();
-  const minVal=minMap[d.name];
+  const sv=d.stock; const minMap=getMinStock(); const minVal=minMap[d.name];
   if(!minVal) return 2;
   if(sv==='-'||sv===undefined||sv===null) return 2;
   if(sv<minVal) return 0;
@@ -769,7 +763,7 @@ function completeOrder(){
   const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
   const timeStr=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 완료`;
   const lastItems=getOrderedList();
-  if(lastItems.length>0){ addOrderHistory({dateStr,timeStr,items:lastItems,isPM:orderTime==='PM'}); updateLastOrderBtn(); }
+  if(lastItems.length>0){ saveLastOrder({dateStr,timeStr,items:lastItems}); updateLastOrderBtn(); }
   if(orderTime==='AM'){
     const amMap=getAmOrder();
     drugs.forEach(d=>{
@@ -779,12 +773,7 @@ function completeOrder(){
       else { if(d.orderQty>0){ const prev=amMap[d.name]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[d.name]={qty:prevQty+d.orderQty,supplier}; } }
     });
     saveAmOrder(amMap);
-  } else {
-    clearAmOrder();
-    const history=getOrderHistory();
-    const pmOnly=history.filter(o=>o.isPM);
-    saveOrderHistory(pmOnly);
-  }
+  } else { clearAmOrder(); }
   drugs=[];
   document.getElementById('upload-result').style.display='none';
   document.getElementById('ord-nodata').style.display='block';
@@ -889,8 +878,8 @@ function printLastOrder(){
     for(let i=0; i<list.length; i+=2){
       const left=list[i], right=list[i+1];
       const boldTop=(Math.floor(i/2)>0&&Math.floor(i/2)%5===0)?'border-top:2px solid #000;':'';
-      const lc=left?`<td style="font-size:16px;padding:4px 5px;${boldTop}">${i+1}</td><td style="font-size:16px;padding:4px 5px;word-break:keep-all;overflow-wrap:break-word;${boldTop}">${shortName(left.name)}</td><td style="font-size:16px;padding:4px 5px;text-align:center;font-weight:700;${boldTop}">${left.unitVal||'-'}</td><td style="font-size:16px;padding:4px 5px;text-align:center;font-weight:700;${boldTop}">${left.orderQty}</td>`:'<td colspan="4"></td>';
-      const rc=right?`<td style="font-size:16px;padding:4px 5px;border-left:2px solid #666;${boldTop}">${i+2}</td><td style="font-size:16px;padding:4px 5px;word-break:keep-all;overflow-wrap:break-word;${boldTop}">${shortName(right.name)}</td><td style="font-size:16px;padding:4px 5px;text-align:center;font-weight:700;${boldTop}">${right.unitVal||'-'}</td><td style="font-size:16px;padding:4px 5px;text-align:center;font-weight:700;${boldTop}">${right.orderQty}</td>`:'<td colspan="4"></td>';
+      const lc=left?`<td style="font-size:15px;padding:3px 4px;${boldTop}">${i+1}</td><td style="font-size:15px;padding:3px 4px;word-break:keep-all;overflow-wrap:break-word;${boldTop}">${shortName(left.name)}</td><td style="font-size:15px;padding:3px 4px;text-align:center;font-weight:700;${boldTop}">${left.unitVal||'-'}</td><td style="font-size:15px;padding:3px 4px;text-align:center;font-weight:700;${boldTop}">${left.orderQty}</td>`:'<td colspan="4"></td>';
+      const rc=right?`<td style="font-size:15px;padding:3px 4px;border-left:2px solid #666;${boldTop}">${i+2}</td><td style="font-size:15px;padding:3px 4px;word-break:keep-all;overflow-wrap:break-word;${boldTop}">${shortName(right.name)}</td><td style="font-size:15px;padding:3px 4px;text-align:center;font-weight:700;${boldTop}">${right.unitVal||'-'}</td><td style="font-size:15px;padding:3px 4px;text-align:center;font-weight:700;${boldTop}">${right.orderQty}</td>`:'<td colspan="4"></td>';
       rows+=`<tr>${lc}${rc}</tr>`;
     }
     return rows;
@@ -905,10 +894,13 @@ function printLastOrder(){
   document.getElementById('print-area').innerHTML=`
     <div class="print-header"><h2>${titleText2}</h2><p>${data.dateStr} ${data.timeStr||''} · 총 ${data.items.length}품목</p></div>
     <table class="ptable" style="table-layout:fixed;width:100%">
-      <colgroup><col style="width:3%"><col style="width:22%"><col style="width:8%"><col style="width:7%"><col style="width:3%"><col style="width:22%"><col style="width:8%"><col style="width:7%"></colgroup>
+      <colgroup>
+        <col style="width:3%"><col style="width:28%"><col style="width:6%"><col style="width:6%">
+        <col style="width:3%"><col style="width:28%"><col style="width:6%"><col style="width:6%">
+      </colgroup>
       <thead><tr>
-        <th style="font-size:16px">#</th><th style="font-size:16px">약품명</th><th style="font-size:16px">단위</th><th style="font-size:16px">수량</th>
-        <th style="border-left:2px solid #666;font-size:16px">#</th><th style="font-size:16px">약품명</th><th style="font-size:16px">단위</th><th style="font-size:16px">수량</th>
+        <th style="font-size:15px">#</th><th style="font-size:15px">약품명</th><th style="font-size:15px">단위</th><th style="font-size:15px">수량</th>
+        <th style="border-left:2px solid #666;font-size:15px">#</th><th style="font-size:15px">약품명</th><th style="font-size:15px">단위</th><th style="font-size:15px">수량</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
@@ -939,12 +931,10 @@ function renderLastOrder(){
     container.appendChild(card);
   });
 }
-
 function deleteOrderByIdx(idx){
   if(!confirm('이 주문서를 삭제할까요?')) return;
   deleteOrderHistory(idx); renderLastOrder(); updateLastOrderBtn();
 }
-
 function printOrderByIdx(idx){
   const list=getOrderHistory(); const data=list[idx]; if(!data) return;
   const d1=data.items.filter(d=>getSupplier(d.maker,d.name)==='대성팜');
@@ -956,14 +946,14 @@ function printOrderByIdx(idx){
     for(let i=0;i<list.length;i+=2){
       const l=list[i],r=list[i+1];
       const bt=(Math.floor(i/2)>0&&Math.floor(i/2)%5===0)?'border-top:2px solid #000;':'';
-      const lc=l?`<td style="font-size:16px;padding:4px 5px;${bt}">${i+1}</td><td style="font-size:16px;padding:4px 5px;word-break:keep-all;${bt}">${shortName(l.name)}</td><td style="font-size:16px;padding:4px 5px;text-align:center;font-weight:700;${bt}">${l.unitVal||'-'}</td><td style="font-size:16px;padding:4px 5px;text-align:center;font-weight:700;${bt}">${l.orderQty}</td>`:'<td colspan="4"></td>';
-      const rc=r?`<td style="font-size:16px;padding:4px 5px;border-left:2px solid #666;${bt}">${i+2}</td><td style="font-size:16px;padding:4px 5px;word-break:keep-all;${bt}">${shortName(r.name)}</td><td style="font-size:16px;padding:4px 5px;text-align:center;font-weight:700;${bt}">${r.unitVal||'-'}</td><td style="font-size:16px;padding:4px 5px;text-align:center;font-weight:700;${bt}">${r.orderQty}</td>`:'<td colspan="4"></td>';
+      const lc=l?`<td style="font-size:15px;padding:3px 4px;${bt}">${i+1}</td><td style="font-size:15px;padding:3px 4px;word-break:keep-all;${bt}">${shortName(l.name)}</td><td style="font-size:15px;padding:3px 4px;text-align:center;font-weight:700;${bt}">${l.unitVal||'-'}</td><td style="font-size:15px;padding:3px 4px;text-align:center;font-weight:700;${bt}">${l.orderQty}</td>`:'<td colspan="4"></td>';
+      const rc=r?`<td style="font-size:15px;padding:3px 4px;border-left:2px solid #666;${bt}">${i+2}</td><td style="font-size:15px;padding:3px 4px;word-break:keep-all;${bt}">${shortName(r.name)}</td><td style="font-size:15px;padding:3px 4px;text-align:center;font-weight:700;${bt}">${r.unitVal||'-'}</td><td style="font-size:15px;padding:3px 4px;text-align:center;font-weight:700;${bt}">${r.orderQty}</td>`:'<td colspan="4"></td>';
       rows+=`<tr>${lc}${rc}</tr>`;
     }
     return rows;
   }
-  const titleText2=(data.dateStr&&data.dateStr.includes('오전'))?'오전 주문서 (직전)':'오후 주문서 (직전)';
-  document.getElementById('print-area').innerHTML=`<div class="print-header"><h2>${titleText2}</h2><p>${data.dateStr} ${data.timeStr||''} · 총 ${data.items.length}품목</p></div><table class="ptable" style="table-layout:fixed;width:100%"><colgroup><col style="width:3%"><col style="width:22%"><col style="width:8%"><col style="width:7%"><col style="width:3%"><col style="width:22%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th style="font-size:16px">#</th><th style="font-size:16px">약품명</th><th style="font-size:16px">단위</th><th style="font-size:16px">수량</th><th style="border-left:2px solid #666;font-size:16px">#</th><th style="font-size:16px">약품명</th><th style="font-size:16px">단위</th><th style="font-size:16px">수량</th></tr></thead><tbody>${ms(d1,'대성팜','#1565c0','#e8f0fe')+ms(d2,'백제약품','#2e7d32','#e8f5e9')+ms(d3,'대전지오영','#6a1b9a','#f3e5f5')}</tbody></table>`;
+  const t2=(data.dateStr&&data.dateStr.includes('오전'))?'오전 주문서 (직전)':'오후 주문서 (직전)';
+  document.getElementById('print-area').innerHTML=`<div class="print-header"><h2>${t2}</h2><p>${data.dateStr} ${data.timeStr||''} · 총 ${data.items.length}품목</p></div><table class="ptable" style="table-layout:fixed;width:100%"><colgroup><col style="width:3%"><col style="width:28%"><col style="width:6%"><col style="width:6%"><col style="width:3%"><col style="width:28%"><col style="width:6%"><col style="width:6%"></colgroup><thead><tr><th style="font-size:15px">#</th><th style="font-size:15px">약품명</th><th style="font-size:15px">단위</th><th style="font-size:15px">수량</th><th style="border-left:2px solid #666;font-size:15px">#</th><th style="font-size:15px">약품명</th><th style="font-size:15px">단위</th><th style="font-size:15px">수량</th></tr></thead><tbody>${ms(d1,'대성팜','#1565c0','#e8f0fe')+ms(d2,'백제약품','#2e7d32','#e8f5e9')+ms(d3,'대전지오영','#6a1b9a','#f3e5f5')}</tbody></table>`;
   window.print();
 }
 
