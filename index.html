@@ -736,12 +736,26 @@ function closeModal(){ const m=document.getElementById('complete-modal'); if(m) 
 
 function printAndComplete(){
   closeModal();
-  // 인쇄 전에 직전 주문서 먼저 저장
   const now=new Date();
   const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
   const timeStr=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 완료`;
   const lastItems=getOrderedList();
-  if(lastItems.length>0){ saveLastOrder({dateStr,timeStr,items:lastItems}); updateLastOrderBtn(); }
+  if(lastItems.length>0){ addOrderHistory({dateStr,timeStr,items:lastItems,isPM:orderTime==='PM'}); updateLastOrderBtn(); }
+  if(orderTime==='AM'){
+    const amMap=getAmOrder();
+    drugs.forEach(d=>{
+      const norm=normalize(d.name); const unit=UNIT_MAP[d.name]||UNIT_MAP[norm];
+      const supplier=getSupplier(d.maker,d.name);
+      if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0){ const key=d.name+'|'+u; const prev=amMap[key]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[key]={qty:prevQty+qty,supplier}; } }); }
+      else { if(d.orderQty>0){ const prev=amMap[d.name]; const prevQty=prev&&typeof prev==='object'?prev.qty:(prev||0); amMap[d.name]={qty:prevQty+d.orderQty,supplier}; } }
+    });
+    saveAmOrder(amMap);
+  } else {
+    clearAmOrder();
+    const history=getOrderHistory();
+    const pmOnly=history.filter(o=>o.isPM);
+    saveOrderHistory(pmOnly);
+  }
   // 인쇄
   printOrder();
   // 인쇄 후 완료 (취소해도 3초 후 자동)
