@@ -856,16 +856,16 @@ function printLastOrder(){
 
   function makeSection(list, title, color, bg){
     if(!list.length) return '';
-    let rows = `<tr><td colspan="8" style="background:${bg};color:${color};font-weight:700;padding:4px 6px;font-size:9px">▶ ${title} (${list.length}품목)</td></tr>`;
-    for(let i=0; i<list.length; i+=2){
-      const left = list[i];
-      const right = list[i+1];
-      const rowNum = Math.floor(i/2);
-      const boldTop = (rowNum > 0 && rowNum % 5 === 0) ? 'border-top:2px solid #000;' : '';
-      const leftCell = left ? `<td style="font-size:9px;padding:2px 3px;${boldTop}">${i+1}</td><td style="font-size:9px;padding:2px 3px;word-break:break-all;${boldTop}">${shortName(left.name)}</td><td style="font-size:9px;padding:2px 3px;text-align:center;font-weight:700;${boldTop}">${left.unitVal||'-'}</td><td style="font-size:9px;padding:2px 3px;text-align:center;font-weight:700;${boldTop}">${left.orderQty}</td>` : '<td colspan="4"></td>';
-      const rightCell = right ? `<td style="font-size:9px;padding:2px 3px;border-left:2px solid #666;${boldTop}">${i+2}</td><td style="font-size:9px;padding:2px 3px;word-break:break-all;${boldTop}">${shortName(right.name)}</td><td style="font-size:9px;padding:2px 3px;text-align:center;font-weight:700;${boldTop}">${right.unitVal||'-'}</td><td style="font-size:9px;padding:2px 3px;text-align:center;font-weight:700;${boldTop}">${right.orderQty}</td>` : '<td colspan="4"></td>';
-      rows += `<tr>${leftCell}${rightCell}</tr>`;
-    }
+    let rows = `<tr><td colspan="4" style="background:${bg};color:${color};font-weight:700;padding:5px 8px;font-size:12px">▶ ${title} (${list.length}품목)</td></tr>`;
+    list.forEach((d, i) => {
+      const boldTop = (i > 0 && i % 10 === 0) ? 'border-top:2.5px solid #000;' : '';
+      rows += `<tr>
+        <td style="font-size:11px;padding:3px 5px;text-align:center;${boldTop}">${i+1}</td>
+        <td style="font-size:11px;padding:3px 5px;word-break:break-all;${boldTop}">${shortName(d.name)}</td>
+        <td style="font-size:11px;padding:3px 5px;text-align:center;font-weight:700;${boldTop}">${d.unitVal||'-'}</td>
+        <td style="font-size:13px;padding:3px 5px;text-align:center;font-weight:800;${boldTop}">${d.orderQty}</td>
+      </tr>`;
+    });
     return rows;
   }
 
@@ -875,45 +875,41 @@ function printLastOrder(){
   rows += makeSection(d3, '대전지오영', '#6a1b9a', '#f3e5f5');
 
   const printHTML = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>논산드림약국 직전주문서</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'맑은 고딕',sans-serif;padding:8px 12px}
-  h2{font-size:13px;margin-bottom:2px}.ph{margin-bottom:5px;border-bottom:2px solid #000;padding-bottom:3px;font-size:10px;color:#555}
-  table{border-collapse:collapse;width:100%;table-layout:fixed}td,th{border:1px solid #999;font-size:9px;padding:2px 3px}
-  th{background:#f0f0f0;font-weight:700;text-align:center}
-  @media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}</style></head>
-  <body><h2>논산드림약국 주문서 (직전)</h2>
-  <p class="ph">${data.dateStr} ${data.timeStr||''} · 총 ${data.items.length}품목</p>
-  <table><colgroup><col style="width:3%"><col style="width:22%"><col style="width:8%"><col style="width:7%">
-  <col style="width:3%"><col style="width:22%"><col style="width:8%"><col style="width:7%"></colgroup>
-  <thead><tr><th>#</th><th>약품명</th><th>단위</th><th>수량</th>
-  <th style="border-left:2px solid #666">#</th><th>약품명</th><th>단위</th><th>수량</th></tr></thead>
-  <tbody>${rows}</tbody></table>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'맑은 고딕',sans-serif;padding:10px 14px;font-size:12px}
+    h2{font-size:15px;font-weight:700;margin-bottom:3px}
+    .ph{font-size:11px;color:#555;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid #000}
+    table{border-collapse:collapse;width:100%}
+    td,th{border:1px solid #aaa;padding:3px 5px}
+    th{background:#f0f0f0;font-weight:700;text-align:center;font-size:11px}
+    td:first-child{text-align:center;width:5%;color:#666}
+    td:nth-child(3){text-align:center;width:18%}
+    td:nth-child(4){text-align:center;width:12%;font-size:14px;font-weight:800}
+    @media print{
+      *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+      body{padding:6px 10px}
+    }
+  </style></head>
+  <body>
+  <h2>논산드림약국 주문서 (직전)</h2>
+  <p class="ph">${data.dateStr} ${data.timeStr||''} &nbsp;·&nbsp; 총 ${data.items.length}품목 &nbsp;|&nbsp; 대성팜 ${d1.length} / 백제약품 ${d2.length} / 지오영 ${d3.length}</p>
+  <table>
+    <thead><tr>
+      <th style="width:5%">#</th>
+      <th style="width:58%">약품명</th>
+      <th style="width:20%">단위</th>
+      <th style="width:17%">수량</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
   <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
   </body></html>`;
-  const w=window.open('','_blank','width=900,height=700');
-  if(!w){alert('팝업 차단을 해제해주세요');return;}
-  w.document.write(printHTML);w.document.close();
-}
 
-function renderLastOrder(){
-  const data=getLastOrder();
-  document.getElementById('last-nodata').style.display=data?'none':'block';
-  document.getElementById('last-data').style.display=data?'block':'none';
-  if(!data) return;
-  const badge=document.getElementById('last-date-badge');
-  badge.textContent=`${data.dateStr} ${data.timeStr||''}`;
-  badge.className='time-badge '+(data.dateStr.includes('오전')?'am-badge':'pm-badge');
-  document.getElementById('last-total').textContent=data.items.length;
-  const d1=data.items.filter(d=>getSupplier(d.maker,d.name)==='대성팜');
-  const d2=data.items.filter(d=>getSupplier(d.maker,d.name)==='백제약품');
-  const d3=data.items.filter(d=>getSupplier(d.maker,d.name)==='대전지오영');
-  let num=1,rows='';
-  if(d1.length){ rows+=`<tr><td colspan="4" style="background:#eff6ff;color:#1565c0;font-weight:700;padding:6px 7px;font-size:12px">🏪 대성팜 (${d1.length}품목)</td></tr>`; d1.forEach(d=>{rows+=`<tr><td style="text-align:center;color:#9ca3af;font-size:11px">${num++}</td><td class="drug-name">${shortName(d.name)}</td><td style="text-align:center;font-weight:700;color:#1565c0">${d.unitVal||'-'}</td><td style="text-align:center;font-weight:800;color:#dc2626">${d.orderQty}</td></tr>`;}); }
-  if(d2.length){ rows+=`<tr><td colspan="4" style="background:#f0fdf4;color:#16a34a;font-weight:700;padding:6px 7px;font-size:12px">🏪 백제약품 (${d2.length}품목)</td></tr>`; d2.forEach(d=>{rows+=`<tr><td style="text-align:center;color:#9ca3af;font-size:11px">${num++}</td><td class="drug-name">${shortName(d.name)}</td><td style="text-align:center;font-weight:700;color:#1565c0">${d.unitVal||'-'}</td><td style="text-align:center;font-weight:800;color:#dc2626">${d.orderQty}</td></tr>`;}); }
-  if(d3.length){ rows+=`<tr><td colspan="4" style="background:#fdf4ff;color:#7e22ce;font-weight:700;padding:6px 7px;font-size:12px">🏪 대전지오영 (${d3.length}품목)</td></tr>`; d3.forEach(d=>{rows+=`<tr><td style="text-align:center;color:#9ca3af;font-size:11px">${num++}</td><td class="drug-name">${shortName(d.name)}</td><td style="text-align:center;font-weight:700;color:#1565c0">${d.unitVal||'-'}</td><td style="text-align:center;font-weight:800;color:#dc2626">${d.orderQty}</td></tr>`;}); }
-  document.getElementById('last-tbody').innerHTML=rows;
-  const el1=document.getElementById('last-d1'); if(el1) el1.textContent=d1.length;
-  const el2=document.getElementById('last-d2'); if(el2) el2.textContent=d2.length;
-  const el3=document.getElementById('last-d3'); if(el3) el3.textContent=d3.length;
+  const w=window.open('','_blank','width=800,height=900');
+  if(!w){alert('팝업 차단을 해제해주세요');return;}
+  w.document.write(printHTML);
+  w.document.close();
 }
 
 function clearLastOrder(){
