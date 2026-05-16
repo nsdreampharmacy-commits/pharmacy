@@ -82,9 +82,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
 .fixed-bottom.visible{display:flex;gap:8px}
 .fixed-bottom .btn{flex:1;height:50px;font-size:15px;font-weight:700;border-radius:10px}
 .print-area{display:none}
-@media print{
-*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-body>*:not(.print-area){display:none!important}
+@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body>*:not(.print-area){display:none!important}.print-area{display:block!important}}
 .print-area{display:block!important;padding:8px 12px}
 }
 }
@@ -717,37 +715,49 @@ function makePrintHTML(items,titleLabel,dateStr,timeStr){
   const d1=items.filter(x=>getSupplier(x.maker,x.name)==='대성팜');
   const d2=items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
   const d3=items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
-  // 모든 행을 하나의 배열로
-  const rows=[];
-  function addSection(list,title,color,bg){
-    if(!list.length)return;
-    rows.push({t:'sec',title,color,bg,cnt:list.length});
-    rows.push({t:'th'});
-    list.forEach((x,i)=>rows.push({t:'row',n:i+1,name:shortName(x.name),qty:x.orderQty,unit:x.unitVal||'-',bold:(i>0&&i%5===0)}));
+  const allItems=[
+    ...d1.map(x=>({...x,sup:'대성팜',color:'#1565c0',bg:'#e8f0fe',supLen:d1.length})),
+    ...d2.map(x=>({...x,sup:'백제약품',color:'#2e7d32',bg:'#e8f5e9',supLen:d2.length})),
+    ...d3.map(x=>({...x,sup:'대전지오영',color:'#6a1b9a',bg:'#f3e5f5',supLen:d3.length}))
+  ];
+  const PER=24;
+  const cols=[];
+  for(let i=0;i<allItems.length;i+=PER) cols.push(allItems.slice(i,i+PER));
+  const THEAD='<tr style="background:#ebebeb"><th style="border:1px solid #ccc;padding:4px 5px;font-size:14px;width:6%;text-align:center">#</th><th style="border:1px solid #ccc;padding:4px 6px;font-size:14px;text-align:left">약품명</th><th style="border:1px solid #ccc;padding:4px 5px;font-size:14px;width:15%;text-align:center">단위</th><th style="border:1px solid #ccc;padding:4px 5px;font-size:14px;width:13%;text-align:center">수량</th></tr>';
+  const shownSups=new Set();
+  function buildCol(colItems){
+    if(!colItems||!colItems.length)return '';
+    let t='<table style="width:100%;border-collapse:collapse;table-layout:fixed"><colgroup><col style="width:6%"><col><col style="width:15%"><col style="width:13%"></colgroup><tbody>';
+    let cur='';
+    colItems.forEach(x=>{
+      if(x.sup!==cur){
+        cur=x.sup;
+        if(!shownSups.has(x.sup)){shownSups.add(x.sup);t+='<tr><td colspan="4" style="background:'+x.bg+';color:'+x.color+';font-weight:700;font-size:16px;padding:5px 8px;border:1px solid #ccc">&#9658; '+x.sup+' ('+x.supLen+'품목)</td></tr>';}
+        t+=THEAD;
+      }
+      const gi=allItems.indexOf(x);
+      const bt=(gi>0&&gi%5===0)?'border-top:3px solid #333;':'';
+      t+='<tr><td style="'+bt+'text-align:center;color:#666;font-size:15px;border:1px solid #ccc;padding:4px">'+(gi+1)+'</td>'
+        +'<td style="'+bt+'font-size:17px;word-break:break-all;border:1px solid #ccc;padding:4px 6px">'+shortName(x.name)+'</td>'
+        +'<td style="'+bt+'text-align:center;font-size:16px;border:1px solid #ccc;padding:4px">'+(x.unitVal||'-')+'</td>'
+        +'<td style="'+bt+'text-align:center;font-size:19px;font-weight:700;border:1px solid #ccc;padding:4px">'+x.orderQty+'</td></tr>';
+    });
+    return t+'</tbody></table>';
   }
-  addSection(d1,'대성팜','#1565c0','#e8f0fe');
-  addSection(d2,'백제약품','#2e7d32','#e8f5e9');
-  addSection(d3,'대전지오영','#6a1b9a','#f3e5f5');
-  // 절반 나누기
-  const half=Math.ceil(rows.length/2);
-  const L=rows.slice(0,half);
-  const R=rows.slice(half);
-  while(R.length<L.length)R.push(null);
-  function tr(r,side){
-    const bl=side==='R'?'border-left:2px solid #666;':'';
-    if(!r)return '<tr><td colspan="4" style="height:21px;'+bl+'border:none"></td></tr>';
-    if(r.t==='sec')return '<tr><td colspan="4" style="'+bl+'background:'+r.bg+';color:'+r.color+';font-weight:700;font-size:16px;padding:5px 8px;border:1px solid #ccc">&#9658; '+r.title+' ('+r.cnt+'&#54488;&#47785;)</td></tr>';
-    if(r.t==='th')return '<tr style="background:#ebebeb"><th style="'+bl+'border:1px solid #ccc;padding:4px 5px;font-size:14px;width:6%;text-align:center">#</th><th style="border:1px solid #ccc;padding:4px 6px;font-size:14px;text-align:left">&#50557;&#54408;&#47749;</th><th style="border:1px solid #ccc;padding:4px 5px;font-size:14px;width:15%;text-align:center">&#45800;&#50948;</th><th style="border:1px solid #ccc;padding:4px 5px;font-size:14px;width:13%;text-align:center">&#49688;&#47049;</th></tr>';
-    const bt=r.bold?'border-top:3px solid #333;':'';
-    return '<tr><td style="'+bl+bt+'text-align:center;color:#666;font-size:15px;border:1px solid #ccc;padding:4px">'+r.n+'</td><td style="'+bt+'font-size:17px;word-break:break-all;border:1px solid #ccc;padding:4px 6px">'+r.name+'</td><td style="'+bt+'text-align:center;font-size:16px;border:1px solid #ccc;padding:4px">'+r.unit+'</td><td style="'+bt+'text-align:center;font-size:19px;font-weight:700;border:1px solid #ccc;padding:4px">'+r.qty+'</td></tr>';
+  const ttl=titleLabel==='직전'?'직전 주문서':(titleLabel==='오전'?'오전 주문서':'오후 주문서');
+  let html='<div style="font-family:Malgun Gothic,sans-serif;padding:8px 12px">'
+    +'<h2 style="font-size:22px;font-weight:700;margin-bottom:4px">'+ttl+'</h2>'
+    +'<p style="font-size:15px;color:#555;padding-bottom:6px;border-bottom:2.5px solid #000;margin-bottom:10px">'+dateStr+' '+timeStr+' · 총 '+items.length+'품목 | 대성팜 '+d1.length+' / 백제약품 '+d2.length+' / 지오영 '+d3.length+'</p>';
+  for(let i=0;i<cols.length;i+=2){
+    html+='<div style="'+(i>0?'page-break-before:always;':'')+'">'
+      +'<table style="width:100%;border-collapse:collapse"><tbody><tr>'
+      +'<td style="width:49%;vertical-align:top;padding:0">'+buildCol(cols[i])+'</td>'
+      +'<td style="width:2%;padding:0;border-left:2px solid #888"></td>'
+      +'<td style="width:49%;vertical-align:top;padding:0 0 0 8px">'+buildCol(cols[i+1]||[])+'</td>'
+      +'</tr></tbody></table></div>';
   }
-  let tbody='';
-  for(let i=0;i<L.length;i++){
-    tbody+='<tr><td style="padding:0;width:50%;vertical-align:top;border:none"><table style="width:100%;border-collapse:collapse"><tbody>'+tr(L[i],'L')+'</tbody></table></td><td style="padding:0;width:50%;vertical-align:top;border:none"><table style="width:100%;border-collapse:collapse"><tbody>'+tr(R[i],'R')+'</tbody></table></td></tr>';
-  }
-  return '<h2 style="font-size:22px;font-weight:700;margin-bottom:4px">&#45680;&#49328;&#46300;&#47548;&#50557;&#44397; &#51452;&#47928;&#49436; ('+titleLabel+')</h2>'
-    +'<p style="font-size:15px;color:#555;padding-bottom:6px;border-bottom:2.5px solid #000;margin-bottom:10px">'+dateStr+' '+timeStr+' &middot; &#52395; '+items.length+'&#54488;&#47785; | &#45824;&#49457;&#54020; '+d1.length+' / &#48177;&#51228;&#50557;&#54408; '+d2.length+' / &#51648;&#50724;&#50689; '+d3.length+'</p>'
-    +'<table style="width:100%;border-collapse:collapse;table-layout:fixed"><tbody>'+tbody+'</tbody></table>';
+  html+='</div>';
+  return html;
 }
 
 function showCompleteModal(){
@@ -823,7 +833,7 @@ function printOrder(){
 
 
 function printLastOrder(){
-  const data=getLastOrder(); if(!data) return;
+  const data=getLastOrder(); if(!data)return;
   document.getElementById('print-area').innerHTML=makePrintHTML(data.items,'직전',data.dateStr,data.timeStr||'');
   window.print();
 }
