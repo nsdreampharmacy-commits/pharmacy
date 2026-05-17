@@ -568,15 +568,17 @@ function doPrint(html, title){
   if(title) document.title=title;
   var pa=document.getElementById('print-area');
   pa.innerHTML=html;
+  var cleaned=false;
   function cleanup(){
+    if(cleaned) return;
+    cleaned=true;
     pa.innerHTML='';
     document.title=prev;
     window.onafterprint=null;
   }
   window.onafterprint=cleanup;
   window.print();
-  // onafterprint가 안 울리는 경우 대비 (Android 등)
-  setTimeout(cleanup, 3000);
+  setTimeout(cleanup,10000);
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
@@ -608,6 +610,31 @@ function filterG1(q){ renderG1(q); }
 function filterG2(q){ renderG2(q); }
 
 // 최소필요량 클릭
+function showMinStockModal(drugName, current, callback){
+  var modal=document.createElement('div');
+  modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center';
+  var box=document.createElement('div');
+  box.style.cssText='background:white;border-radius:14px;padding:20px;width:85%;max-width:320px';
+  box.innerHTML='<div style="font-size:14px;font-weight:700;margin-bottom:8px;color:#111">'+drugName.split('(')[0].trim()+'</div>'
+    +'<div style="font-size:13px;color:#6b7280;margin-bottom:10px">최소필요량 입력 (빈칸=삭제)</div>'
+    +'<input type="number" id="_ms_input" value="'+current+'" style="width:100%;padding:10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:14px;box-sizing:border-box">'
+    +'<div style="display:flex;gap:10px">'
+    +'<button id="_ms_cancel" style="flex:1;height:44px;border:1.5px solid #d1d5db;background:white;border-radius:8px;font-size:15px;cursor:pointer">취소</button>'
+    +'<button id="_ms_ok" style="flex:1;height:44px;border:none;background:#1565c0;color:white;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer">확인</button>'
+    +'</div>';
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+  var inp=document.getElementById('_ms_input');
+  inp.focus(); inp.select();
+  document.getElementById('_ms_ok').onclick=function(){
+    var val=inp.value.trim();
+    document.body.removeChild(modal);
+    callback(val);
+  };
+  document.getElementById('_ms_cancel').onclick=function(){ document.body.removeChild(modal); };
+  modal.onclick=function(e){ if(e.target===modal) document.body.removeChild(modal); };
+}
+
 document.addEventListener('click',function(e){
   const btn=e.target.closest('.min-stock-btn');
   if(!btn) return;
@@ -615,12 +642,12 @@ document.addEventListener('click',function(e){
   if(!drugs[idx]) return;
   const d=drugs[idx];
   const current=getMinStock()[d.name]||'';
-  const val=prompt(d.name.split('(')[0].trim()+'\n최소필요량 입력 (빈칸=삭제):',current);
-  if(val===null) return;
-  setMinStock(d.name,val.trim());
-  const num=parseInt(val.trim())||0;
-  if(!val.trim()){ btn.textContent='-'; btn.style.background='#f3f4f6'; btn.style.color='#9ca3af'; }
-  else { btn.textContent=num; btn.style.background='#e0e7ff'; btn.style.color='#3730a3'; }
+  showMinStockModal(d.name,current,function(val){
+    setMinStock(d.name,val);
+    const num=parseInt(val)||0;
+    if(!val.trim()){ btn.textContent='-'; btn.style.background='#f3f4f6'; btn.style.color='#9ca3af'; }
+    else{ btn.textContent=num; btn.style.background='#e0e7ff'; btn.style.color='#3730a3'; }
+  });
 });
 
 // 1군 등록
