@@ -83,6 +83,8 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
 .fixed-bottom .btn{flex:1;height:50px;font-size:15px;font-weight:700;border-radius:10px}
 @media print{
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body>*:not(#print-area){display:none!important}
+  #print-area{display:block!important}
 }
 #print-area:empty{display:none}</style>
 </head>
@@ -563,8 +565,7 @@ function doPrint(html, title){
   const printArea=document.getElementById('print-area');
   const prevTitle=document.title;
   printArea.innerHTML=html;
-  printArea.style.cssText='display:block';
-  // 다른 모든 요소 숨기기
+  printArea.style.display='block';
   const hidden=[];
   Array.from(document.body.children).forEach(function(el){
     if(el.id!=='print-area'){
@@ -575,14 +576,16 @@ function doPrint(html, title){
   if(title) document.title=title;
   function restore(){
     printArea.innerHTML='';
-    printArea.style.cssText='';
+    printArea.style.display='';
     hidden.forEach(function(x){ x.el.style.display=x.d; });
     document.title=prevTitle;
   }
-  setTimeout(function(){
-    window.print();
-    setTimeout(restore, 500);
-  }, 500);
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      window.print();
+      setTimeout(restore,1000);
+    });
+  });
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
