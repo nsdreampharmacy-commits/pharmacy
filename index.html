@@ -86,6 +86,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
   html,body{margin:0!important;padding:0!important}
   body>*:not(#print-area){display:none!important;position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important}
   #print-area{display:block!important;position:static!important;margin:0!important;padding:0!important}
+  #print-area tr{break-inside:avoid!important;page-break-inside:avoid!important}
 }
 #print-area:empty{display:none}</style>
 </head>
@@ -573,15 +574,9 @@ function doPrint(html, title){
     document.title=prev;
     window.onafterprint=null;
   }
-  // 렌더링 완료 후 인쇄 (이중 rAF)
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      window.scrollTo(0,0);
-      window.onafterprint=cleanup;
-      window.print();
-      setTimeout(cleanup,3000);
-    });
-  });
+  window.onafterprint=cleanup;
+  window.print();
+  setTimeout(cleanup,3000);
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
@@ -785,7 +780,7 @@ function makePrintHTML(items,titleLabel,dateStr,timeStr){
   const d3=items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
 
   const colgroup='<colgroup><col style="width:7%"><col><col style="width:12%"><col style="width:14%"></colgroup>';
-  const thead='<tr style="background:#ebebeb"><th style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center">#</th><th style="border:1px solid #ccc;padding:4px 6px;font-size:15px;text-align:left">약품명</th><th style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center">수량</th><th style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center">단위</th></tr>';
+  const thead='<tr style="background:#ebebeb"><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">#</td><td style="border:1px solid #ccc;padding:4px 6px;font-size:15px;text-align:left;font-weight:700">약품명</td><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">수량</td><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">단위</td></tr>';
 
   function makeSec(list, sup, color, bg){
     if(!list.length) return '';
