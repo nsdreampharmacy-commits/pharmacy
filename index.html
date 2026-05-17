@@ -563,20 +563,20 @@ function doPrint(html, title){
   const printArea=document.getElementById('print-area');
   const prevTitle=document.title;
   printArea.innerHTML=html;
-  printArea.style.cssText='display:block;position:fixed;top:0;left:0;width:100%;z-index:9999;background:white';
+  printArea.style.cssText='display:block';
   // 다른 모든 요소 숨기기
   const hidden=[];
   Array.from(document.body.children).forEach(function(el){
     if(el.id!=='print-area'){
-      hidden.push({el:el,v:el.style.visibility});
-      el.style.visibility='hidden';
+      hidden.push({el:el,d:el.style.display});
+      el.style.display='none';
     }
   });
   if(title) document.title=title;
   function restore(){
     printArea.innerHTML='';
     printArea.style.cssText='';
-    hidden.forEach(function(x){ x.el.style.visibility=x.v; });
+    hidden.forEach(function(x){ x.el.style.display=x.d; });
     document.title=prevTitle;
   }
   setTimeout(function(){
