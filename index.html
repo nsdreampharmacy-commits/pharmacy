@@ -561,21 +561,29 @@ function autoSetMinStockG2(){
   if(changed){ saveMinStock(map); renderG2(); }
 }
 
-function doPrint(html){
-  const w=window.open('','_blank');
-  if(!w){ alert('팝업이 차단됐습니다. 팝업을 허용해 주세요.'); return; }
-  w.document.write(`<!DOCTYPE html><html><head>
+function doPrint(html,title){
+  const t=title||'논산드림약국 주문서';
+  const full=`<!DOCTYPE html><html><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${t}</title>
 <style>
 *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}
 html,body{margin:0;padding:0;font-family:'Malgun Gothic',sans-serif}
 table{border-collapse:collapse}
 </style>
-</head><body>${html}</body></html>`);
-  w.document.close();
-  w.focus();
-  setTimeout(()=>{ w.print(); w.close(); },600);
+</head><body>${html}
+<script>
+window.onload=function(){
+  window.onafterprint=function(){ window.close(); };
+  setTimeout(function(){ window.print(); },400);
+};<\/script>
+</body></html>`;
+  const blob=new Blob([full],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const w=window.open(url,'_blank');
+  if(!w){alert('팝업이 차단됐습니다. 팝업을 허용해 주세요.');URL.revokeObjectURL(url);return;}
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
@@ -809,7 +817,7 @@ function printAndComplete(){
   const lastItems=getOrderedList();
   if(lastItems.length>0){saveLastOrder({dateStr,timeStr,items:lastItems});updateLastOrderBtn();}
   const ts=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  doPrint(makePrintHTML(lastItems,orderTime==='AM'?'오전':'오후',dateStr,ts));
+  doPrint(makePrintHTML(lastItems,orderTime==='AM'?'오전':'오후',dateStr,ts), '논산드림약국_'+(orderTime==='AM'?'오전':'오후')+'주문서');
   completeOrder();
 }
 
@@ -848,13 +856,13 @@ function printOrder(){
   const now=new Date();
   const ds=now.getFullYear()+'.'+String(now.getMonth()+1).padStart(2,'0')+'.'+String(now.getDate()).padStart(2,'0')+' '+(orderTime==='AM'?'오전':'오후');
   const ts=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  doPrint(makePrintHTML(ordered,orderTime==='AM'?'오전':'오후',ds,ts));
+  doPrint(makePrintHTML(ordered,orderTime==='AM'?'오전':'오후',ds,ts), '논산드림약국_'+(orderTime==='AM'?'오전':'오후')+'주문서');
   return true;
 }
 
 function printLastOrder(){
   const data=getLastOrder(); if(!data)return;
-  doPrint(makePrintHTML(data.items,'직전',data.dateStr,data.timeStr||''));
+  doPrint(makePrintHTML(data.items,'직전',data.dateStr,data.timeStr||''), '논산드림약국_직전주문서');
 }
 
 function renderLastOrder(){
