@@ -573,9 +573,15 @@ function doPrint(html, title){
     document.title=prev;
     window.onafterprint=null;
   }
-  window.onafterprint=cleanup;
-  window.print();
-  setTimeout(cleanup,3000);
+  // 렌더링 완료 후 인쇄 (이중 rAF)
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      window.scrollTo(0,0);
+      window.onafterprint=cleanup;
+      window.print();
+      setTimeout(cleanup,3000);
+    });
+  });
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
