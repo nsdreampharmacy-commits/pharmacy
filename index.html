@@ -86,7 +86,6 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
   html,body{margin:0!important;padding:0!important}
   body>*:not(#print-area){display:none!important;position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important}
   #print-area{display:block!important;position:static!important;margin:0!important;padding:0!important}
-  #print-area tr{break-inside:avoid!important;page-break-inside:avoid!important}
 }
 #print-area:empty{display:none}</style>
 </head>
@@ -569,14 +568,8 @@ function doPrint(html, title){
   if(title) document.title=title;
   var pa=document.getElementById('print-area');
   pa.innerHTML=html;
-  function cleanup(){
-    pa.innerHTML='';
-    document.title=prev;
-    window.onafterprint=null;
-  }
-  window.onafterprint=cleanup;
   window.print();
-  setTimeout(cleanup,3000);
+  setTimeout(function(){ pa.innerHTML=''; document.title=prev; },30000);
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
@@ -784,11 +777,11 @@ function makePrintHTML(items,titleLabel,dateStr,timeStr){
 
   function makeSec(list, sup, color, bg){
     if(!list.length) return '';
-    let t='<div style="break-inside:avoid;break-before:avoid;background:'+bg+';color:'+color+';font-weight:700;font-size:15px;padding:4px 8px;border:1px solid #ccc;border-bottom:none;margin-top:6px">&#9658; '+sup+' ('+list.length+'품목)</div>';
+    let t='<div style="background:'+bg+';color:'+color+';font-weight:700;font-size:15px;padding:4px 8px;border:1px solid #ccc;border-bottom:none;margin-top:6px">&#9658; '+sup+' ('+list.length+'품목)</div>';
     t+='<table style="width:100%;border-collapse:collapse;margin-bottom:4px">'+colgroup+'<tbody>'+thead;
     list.forEach((x,idx)=>{
       const bt=(idx>0&&idx%5===0)?'border-top:3px solid #333;':'';
-      t+='<tr style="break-inside:avoid"><td style="'+bt+'text-align:center;color:#666;font-size:15px;border:1px solid #ccc;padding:3px">'+(idx+1)+'</td>'
+      t+='<tr><td style="'+bt+'text-align:center;color:#666;font-size:15px;border:1px solid #ccc;padding:3px">'+(idx+1)+'</td>'
         +'<td style="'+bt+'font-size:17px;word-break:break-all;border:1px solid #ccc;padding:3px 5px">'+shortName(x.name)+'</td>'
         +'<td style="'+bt+'text-align:center;font-size:19px;font-weight:700;border:1px solid #ccc;padding:3px">'+x.orderQty+'</td>'
         +'<td style="'+bt+'text-align:center;font-size:16px;border:1px solid #ccc;padding:3px">'+(x.unitVal||'-')+'</td></tr>';
@@ -801,7 +794,7 @@ function makePrintHTML(items,titleLabel,dateStr,timeStr){
   return '<div style="font-family:Malgun Gothic,sans-serif;padding:8px 12px">'
     +'<h2 style="font-size:20px;font-weight:700;margin-bottom:4px">'+ttl+'</h2>'
     +'<p style="font-size:14px;color:#555;padding-bottom:5px;border-bottom:2.5px solid #000;margin-bottom:8px">'+dateStr+' '+timeStr+' · 총 '+items.length+'품목 | 대성팜 '+d1.length+' / 백제약품 '+d2.length+' / 지오영 '+d3.length+'</p>'
-    +'<div style="columns:2;column-gap:16px;column-rule:2px solid #888;column-fill:auto">'
+    +'<div style="columns:2;column-gap:16px;column-rule:2px solid #888">'
     +makeSec(d1,'대성팜','#1565c0','#e8f0fe')
     +makeSec(d2,'백제약품','#2e7d32','#e8f5e9')
     +makeSec(d3,'대전지오영','#6a1b9a','#f3e5f5')
