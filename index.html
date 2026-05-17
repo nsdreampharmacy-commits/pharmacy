@@ -83,7 +83,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
 .fixed-bottom .btn{flex:1;height:50px;font-size:15px;font-weight:700;border-radius:10px}
 @media print{
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  body>*:not(#print-area){display:none!important}
+  body>*{display:none!important}
   #print-area{display:block!important}
 }
 #print-area:empty{display:none}</style>
@@ -561,29 +561,18 @@ function autoSetMinStockG2(){
   if(changed){ saveMinStock(map); renderG2(); }
 }
 
-function doPrint(html,title){
-  const t=title||'논산드림약국 주문서';
-  const full=`<!DOCTYPE html><html><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${t}</title>
-<style>
-*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}
-html,body{margin:0;padding:0;font-family:'Malgun Gothic',sans-serif}
-table{border-collapse:collapse}
-</style>
-</head><body>${html}
-<script>
-window.onload=function(){
-  window.onafterprint=function(){ window.close(); };
-  setTimeout(function(){ window.print(); },400);
-};<\/script>
-</body></html>`;
-  const blob=new Blob([full],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const w=window.open(url,'_blank');
-  if(!w){alert('팝업이 차단됐습니다. 팝업을 허용해 주세요.');URL.revokeObjectURL(url);return;}
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
+function doPrint(html, title){
+  const printArea=document.getElementById('print-area');
+  const prevTitle=document.title;
+  printArea.innerHTML=html;
+  if(title) document.title=title;
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){
+      printArea.innerHTML='';
+      document.title=prevTitle;
+    },1000);
+  },300);
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
