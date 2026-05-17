@@ -469,15 +469,10 @@ function makeRow(d,idx){
   const minVal=minStockMap[d.name]||0;
   const sv=d.stock;
   let stockBg='#f3f4f6',stockColor='#374151';
-  if(sv!=='-'){
-    if(minVal){
+  if(sv!=='-'&&minVal){
       if(sv<minVal){stockBg='#fee2e2';stockColor='#991b1b';}
       else if(sv<minVal*1.1){stockBg='#fef3c7';stockColor='#92400e';}
-    } else {
-      if(sv<=0){stockBg='#fee2e2';stockColor='#991b1b';}
-      else if(sv<30){stockBg='#fef3c7';stockColor='#92400e';}
     }
-  }
   const stockBadge=`<span class="stock-val" style="background:${stockBg};color:${stockColor}">${sv}</span>`;
   const minBadge=minVal
     ?`<span class="stock-val min-stock-btn" data-idx="${idx}" style="background:#e0e7ff;color:#3730a3;cursor:pointer">${minVal}</span>`
@@ -582,12 +577,13 @@ table{border-collapse:collapse}
   w.focus();
   setTimeout(()=>{ w.print(); w.close(); },600);
 }
+function getStockLevel(d){
   const minStockMap=getMinStock();
   const minVal=minStockMap[d.name]||0;
   const sv=d.stock;
   if(sv==='-'||!minVal) return 0;
-  if(sv<minVal) return 2; // 빨간색
-  if(sv<minVal*1.1) return 1; // 노란색
+  if(sv<minVal) return 2;
+  if(sv<minVal*1.1) return 1;
   return 0;
 }
 function renderG1(filter=''){
@@ -815,6 +811,35 @@ function printAndComplete(){
   const ts=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   doPrint(makePrintHTML(lastItems,orderTime==='AM'?'오전':'오후',dateStr,ts));
   completeOrder();
+}
+
+function completeOrder(){
+  closeModal();
+  if(!window._savedLastItems){
+    const now=new Date();
+    const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
+    const timeStr=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 완료`;
+    const lastItems=getOrderedList();
+    if(lastItems.length>0){ saveLastOrder({dateStr,timeStr,items:lastItems}); updateLastOrderBtn(); }
+  }
+  window._savedLastItems=null;
+  if(orderTime==='AM'){
+    const amMap={};
+    drugs.forEach(d=>{
+      const norm=normalize(d.name); const unit=UNIT_MAP[d.name]||UNIT_MAP[norm];
+      if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0){amMap[d.name+'|'+u]=qty;} }); }
+      else { if(d.orderQty>0) amMap[d.name]=d.orderQty; }
+    });
+    saveAmOrder(amMap);
+  } else { clearAmOrder(); }
+  drugs=[];
+  document.getElementById('upload-result').style.display='none';
+  document.getElementById('ord-nodata').style.display='block';
+  document.getElementById('ord-data').style.display='none';
+  document.getElementById('tab-new-drug').style.display='none';
+  document.getElementById('btn-new-drug').style.display='none';
+  document.getElementById('file-input').value='';
+  switchTab(0);
 }
 
 // 인쇄
