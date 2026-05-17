@@ -15,6 +15,10 @@
 <script>
 var _PRINT_MODE=new URLSearchParams(location.search).get('print')==='1';
 if(_PRINT_MODE){
+  // XLSX 로드 방지 (인쇄 탭에서 외부 CDN 로딩이 Android 오류 유발)
+  var _nx=document.currentScript?document.currentScript.nextElementSibling:null;
+  if(_nx&&_nx.tagName==='SCRIPT')_nx.remove();
+
   document.addEventListener('DOMContentLoaded',function(){
     var html=localStorage.getItem('pending_print')||decodeURIComponent(location.hash.slice(1));
     var title=localStorage.getItem('pending_print_title')||decodeURIComponent(new URLSearchParams(location.search).get('t')||'')||'논산드림약국 주문서';
@@ -30,7 +34,7 @@ if(_PRINT_MODE){
     s.textContent='*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}body{margin:0;padding:0;font-family:"Malgun Gothic",sans-serif}table{border-collapse:collapse}';
     document.head.appendChild(s);
     window.onafterprint=function(){window.close();};
-    setTimeout(function(){window.print();},800);
+    setTimeout(function(){window.print();},1500);
   });
 }
 </script>
