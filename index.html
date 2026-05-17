@@ -835,7 +835,7 @@ function printAndComplete(){
   if(lastItems.length>0){saveLastOrder({dateStr,timeStr,items:lastItems});updateLastOrderBtn();}
   const ts=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   doPrint(makePrintHTML(lastItems,orderTime==='AM'?'오전':'오후',dateStr,ts), '논산드림약국_'+(orderTime==='AM'?'오전':'오후')+'주문서');
-  completeOrder();
+  setTimeout(function(){ completeOrder(); }, 3500);
 }
 
 function completeOrder(){
