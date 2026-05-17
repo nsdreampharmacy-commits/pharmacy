@@ -568,17 +568,14 @@ function doPrint(html, title){
   if(title) document.title=title;
   var pa=document.getElementById('print-area');
   pa.innerHTML=html;
-  var cleaned=false;
   function cleanup(){
-    if(cleaned) return;
-    cleaned=true;
     pa.innerHTML='';
     document.title=prev;
     window.onafterprint=null;
   }
   window.onafterprint=cleanup;
   window.print();
-  setTimeout(cleanup,10000);
+  setTimeout(cleanup,3000);
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
@@ -803,7 +800,7 @@ function makePrintHTML(items,titleLabel,dateStr,timeStr){
   return '<div style="font-family:Malgun Gothic,sans-serif;padding:8px 12px">'
     +'<h2 style="font-size:20px;font-weight:700;margin-bottom:4px">'+ttl+'</h2>'
     +'<p style="font-size:14px;color:#555;padding-bottom:5px;border-bottom:2.5px solid #000;margin-bottom:8px">'+dateStr+' '+timeStr+' · 총 '+items.length+'품목 | 대성팜 '+d1.length+' / 백제약품 '+d2.length+' / 지오영 '+d3.length+'</p>'
-    +'<div style="columns:2;column-gap:16px;column-rule:2px solid #888;column-fill:auto;break-after:avoid;page-break-after:avoid">'
+    +'<div style="columns:2;column-gap:16px;column-rule:2px solid #888;column-fill:auto">'
     +makeSec(d1,'대성팜','#1565c0','#e8f0fe')
     +makeSec(d2,'백제약품','#2e7d32','#e8f5e9')
     +makeSec(d3,'대전지오영','#6a1b9a','#f3e5f5')
