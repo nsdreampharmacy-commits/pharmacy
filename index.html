@@ -566,7 +566,22 @@ function autoSetMinStockG2(){
   if(changed){ saveMinStock(map); renderG2(); }
 }
 
-function getStockLevel(d){
+function doPrint(html){
+  const w=window.open('','_blank');
+  if(!w){ alert('팝업이 차단됐습니다. 팝업을 허용해 주세요.'); return; }
+  w.document.write(`<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}
+html,body{margin:0;padding:0;font-family:'Malgun Gothic',sans-serif}
+table{border-collapse:collapse}
+</style>
+</head><body>${html}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); w.close(); },600);
+}
   const minStockMap=getMinStock();
   const minVal=minStockMap[d.name]||0;
   const sv=d.stock;
@@ -797,49 +812,9 @@ function printAndComplete(){
   const timeStr=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+' 완료';
   const lastItems=getOrderedList();
   if(lastItems.length>0){saveLastOrder({dateStr,timeStr,items:lastItems});updateLastOrderBtn();}
-  // onafterprint: print-area 비우고 완료 처리 (저장/취소 모두)
-  window.onafterprint=function(){
-    window.onafterprint=null;
-    document.getElementById('print-area').innerHTML='';
-    document.getElementById('print-area').style.display='';
-    completeOrder();
-  };
-  // printOrder의 onafterprint 설정보다 이게 우선
-  const ordered=window._orderedList||getOrderedList();
-  const ds=dateStr;
   const ts=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  document.getElementById('print-area').innerHTML=makePrintHTML(ordered,orderTime==='AM'?'오전':'오후',ds,ts);
-  document.getElementById('print-area').style.display='block';
-  setTimeout(()=>{window.print();},150);
-}
-
-function completeOrder(){
-  closeModal();
-  if(!window._savedLastItems){
-    const now=new Date();
-    const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
-    const timeStr=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} 완료`;
-    const lastItems=getOrderedList();
-    if(lastItems.length>0){ saveLastOrder({dateStr,timeStr,items:lastItems}); updateLastOrderBtn(); }
-  }
-  window._savedLastItems=null;
-  if(orderTime==='AM'){
-    const amMap={};
-    drugs.forEach(d=>{
-      const norm=normalize(d.name); const unit=UNIT_MAP[d.name]||UNIT_MAP[norm];
-      if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0){amMap[d.name+'|'+u]=qty;} }); }
-      else { if(d.orderQty>0) amMap[d.name]=d.orderQty; }
-    });
-    saveAmOrder(amMap);
-  } else { clearAmOrder(); }
-  drugs=[];
-  document.getElementById('upload-result').style.display='none';
-  document.getElementById('ord-nodata').style.display='block';
-  document.getElementById('ord-data').style.display='none';
-  document.getElementById('tab-new-drug').style.display='none';
-  document.getElementById('btn-new-drug').style.display='none';
-  document.getElementById('file-input').value='';
-  switchTab(0);
+  doPrint(makePrintHTML(lastItems,orderTime==='AM'?'오전':'오후',dateStr,ts));
+  completeOrder();
 }
 
 // 인쇄
@@ -848,29 +823,13 @@ function printOrder(){
   const now=new Date();
   const ds=now.getFullYear()+'.'+String(now.getMonth()+1).padStart(2,'0')+'.'+String(now.getDate()).padStart(2,'0')+' '+(orderTime==='AM'?'오전':'오후');
   const ts=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  document.getElementById('print-area').innerHTML=makePrintHTML(ordered,orderTime==='AM'?'오전':'오후',ds,ts);
-  document.getElementById('print-area').style.display='block';
-  window.onafterprint=function(){
-    window.onafterprint=null;
-    document.getElementById('print-area').innerHTML='';
-    document.getElementById('print-area').style.display='';
-  };
-  setTimeout(()=>{window.print();},150);
+  doPrint(makePrintHTML(ordered,orderTime==='AM'?'오전':'오후',ds,ts));
   return true;
 }
 
-
-
 function printLastOrder(){
   const data=getLastOrder(); if(!data)return;
-  document.getElementById('print-area').innerHTML=makePrintHTML(data.items,'직전',data.dateStr,data.timeStr||'');
-  document.getElementById('print-area').style.display='block';
-  window.onafterprint=function(){
-    window.onafterprint=null;
-    document.getElementById('print-area').innerHTML='';
-    document.getElementById('print-area').style.display='';
-  };
-  setTimeout(()=>{window.print();},150);
+  doPrint(makePrintHTML(data.items,'직전',data.dateStr,data.timeStr||''));
 }
 
 function renderLastOrder(){
