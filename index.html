@@ -320,7 +320,14 @@ async function syncFromCloud(){
     }
     // 직전 주문서
     const lo = await cloudLoad('last_order');
-    if(lo && lo.items){ const local = getLastOrder(); if(!local) localStorage.setItem('last_order', JSON.stringify(lo)); }
+    if(lo && lo.items){
+      const local = getLastOrder();
+      // 클라우드가 더 최신이면 덮어씀
+      if(!local || (lo.dateStr > local.dateStr)){
+        localStorage.setItem('last_order', JSON.stringify(lo));
+        updateLastOrderBtn();
+      }
+    }
     // 오전 주문
     const ao = await cloudLoad('am_order');
     // am_order는 이제 last_order에서 읽으므로 무시
