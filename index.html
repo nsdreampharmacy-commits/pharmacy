@@ -482,7 +482,7 @@ function makeRow(d,idx){
       if(sv<minVal){stockBg='#fee2e2';stockColor='#991b1b';}
       else if(sv<minVal*1.1){stockBg='#fef3c7';stockColor='#92400e';}
     }
-  const stockBadge=`<span class="stock-val" style="background:${stockBg};color:${stockColor}">${sv}</span>`;
+  const stockBadge=`<span id="stock-badge-${idx}" class="stock-val" style="background:${stockBg};color:${stockColor}">${sv}</span>`;
   const minBadge=minVal
     ?`<span class="stock-val min-stock-btn" data-idx="${idx}" style="background:#e0e7ff;color:#3730a3;cursor:pointer">${minVal}</span>`
     :`<span class="stock-val min-stock-btn" data-idx="${idx}" style="background:#f3f4f6;color:#9ca3af;cursor:pointer">-</span>`;
@@ -545,6 +545,25 @@ function updateCardStyle(idx){
   const unit=UNIT_MAP[d.name]||UNIT_MAP[norm];
   const hasOrder=Array.isArray(unit)?(d.orderQtyArr&&(d.orderQtyArr[0]>0||d.orderQtyArr[1]>0)):d.orderQty>0;
   card.classList.toggle('has-order',hasOrder);
+  // 현재고 실시간 업데이트
+  const stockEl=document.getElementById('stock-badge-'+idx);
+  if(!stockEl) return;
+  if(d.baseStock===undefined) d.baseStock=d.stock;
+  const base=d.baseStock;
+  let ordered=0;
+  if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ ordered+=(d.orderQtyArr&&d.orderQtyArr[ui]||0)*u; }); }
+  else { ordered=(d.orderQty||0)*(unit||0); }
+  const newStock=base==='-'?'-':base+ordered;
+  const minVal=(getMinStock()[d.name]||0);
+  let bg='#f3f4f6',color='#374151';
+  if(newStock!=='-'&&minVal){
+    if(newStock<minVal){bg='#fee2e2';color='#991b1b';}
+    else if(newStock<minVal*1.1){bg='#fef3c7';color='#92400e';}
+    else{bg='#f0fdf4';color='#166534';}
+  }
+  stockEl.textContent=newStock;
+  stockEl.style.background=bg;
+  stockEl.style.color=color;
 }
 
 function incOrder(idx,ui,unit){
