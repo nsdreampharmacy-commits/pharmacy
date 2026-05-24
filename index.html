@@ -130,6 +130,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
       <div class="upload-text"><strong>클릭</strong>하거나 파일을 끌어다 놓으세요<br>PMPLUS20에서 추출한 당일 조제/판매 엑셀 파일 (.xls, .xlsx)</div>
     </div>
     <input type="file" id="file-input" accept=".xls,.xlsx" onchange="handleFile(event)">
+    <button onclick="forceSyncToCloud()" style="margin-top:10px;width:100%;padding:10px;background:#f0fdf4;border:1.5px solid #16a34a;border-radius:10px;color:#16a34a;font-size:14px;font-weight:700;cursor:pointer">☁️ 최소필요량 클라우드 저장</button>
   </div>
   <div class="card" id="upload-result" style="display:none">
     <div class="card-title">✅ 업로드 완료</div>
@@ -292,6 +293,7 @@ function cloudSave(key, value){
   try{
     fetch(GAS_URL, {
       method:'POST',
+      mode:'no-cors',
       body: JSON.stringify({key:key, value:value}),
       headers:{'Content-Type':'text/plain'}
     }).catch(()=>{});
@@ -602,6 +604,14 @@ function incOrder(idx,ui,unit){
 }
 function setOrder(idx,val){ if(drugs[idx]) drugs[idx].orderQty=parseInt(val)||0; }
 function setOrderArr(idx,ui,val){ if(!drugs[idx].orderQtyArr) drugs[idx].orderQtyArr=[0,0]; drugs[idx].orderQtyArr[ui]=parseInt(val)||0; }
+
+function forceSyncToCloud(){
+  const map=getMinStock();
+  const count=Object.keys(map).length;
+  if(count===0){ alert('저장된 최소필요량이 없습니다.'); return; }
+  cloudSave('min_stock', map);
+  alert('최소필요량 '+count+'개를 클라우드에 저장했습니다.\n잠시 후 스프레드시트에서 확인하세요.');
+}
 
 function autoSetMinStockG2(){
   const map=getMinStock();
