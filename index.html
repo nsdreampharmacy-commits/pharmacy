@@ -618,52 +618,54 @@ function forceSyncToCloud(){
 
 function openAutoOrder(source){
   const items = source==='last' ? (getLastOrder()?.items||[]) : getOrderedList();
-  const jioyoung = items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
-  const daesungpam = items.filter(x=>getSupplier(x.maker,x.name)==='대성팜');
-  const baekje = items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
-
   if(items.length===0){ alert('주문 항목이 없습니다.'); return; }
 
-  // 도매상 선택 모달
+  const ds=items.filter(x=>getSupplier(x.maker,x.name)==='대성팜');
+  const bj=items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
+  const jy=items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
+
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center';
   modal.innerHTML=`<div style="background:white;border-radius:14px;padding:20px;width:90%;max-width:360px">
-    <div style="font-size:16px;font-weight:700;margin-bottom:16px">🤖 자동주문 도매상 선택</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">🤖 바로팜 자동주문</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:16px">주문 데이터를 클라우드에 저장 후<br>약국 PC 바로팜에서 스크립트를 실행하세요</div>
     <div style="display:flex;flex-direction:column;gap:10px">
-      <button onclick="startAutoOrder('jioyoung','${source}')" style="padding:14px;background:#f3e8ff;border:2px solid #7e22ce;border-radius:10px;font-size:15px;font-weight:700;color:#7e22ce;cursor:pointer">🏪 대전지오영 (${jioyoung.length}품목)</button>
-      <button onclick="startAutoOrder('daesungpam','${source}')" style="padding:14px;background:#eff6ff;border:2px solid #1565c0;border-radius:10px;font-size:15px;font-weight:700;color:#1565c0;cursor:pointer">🏪 대성팜 (${daesungpam.length}품목)</button>
-      <button onclick="startAutoOrder('baekje','${source}')" style="padding:14px;background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;font-size:15px;font-weight:700;color:#16a34a;cursor:pointer">🏪 백제약품 (${baekje.length}품목)</button>
+      <button onclick="saveAutoOrder('all','${source}')" style="padding:14px;background:#f3e8ff;border:2px solid #7e22ce;border-radius:10px;font-size:15px;font-weight:700;color:#7e22ce;cursor:pointer">📦 전체 저장 (${items.length}품목)</button>
+      <button onclick="saveAutoOrder('jioyoung','${source}')" style="padding:12px;background:#fdf4ff;border:1.5px solid #7e22ce;border-radius:10px;font-size:14px;font-weight:600;color:#7e22ce;cursor:pointer">지오영만 (${jy.length}품목)</button>
+      <button onclick="saveAutoOrder('daesungpam','${source}')" style="padding:12px;background:#eff6ff;border:1.5px solid #1565c0;border-radius:10px;font-size:14px;font-weight:600;color:#1565c0;cursor:pointer">대성팜만 (${ds.length}품목)</button>
+      <button onclick="saveAutoOrder('baekje','${source}')" style="padding:12px;background:#f0fdf4;border:1.5px solid #16a34a;border-radius:10px;font-size:14px;font-weight:600;color:#16a34a;cursor:pointer">백제약품만 (${bj.length}품목)</button>
       <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:10px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:10px;font-size:14px;cursor:pointer">취소</button>
     </div>
   </div>`;
   document.body.appendChild(modal);
 }
 
-function startAutoOrder(supplier, source){
+function saveAutoOrder(supplier, source){
   document.querySelector('div[style*="rgba(0,0,0,0.5)"]')?.remove();
   const items = source==='last' ? (getLastOrder()?.items||[]) : getOrderedList();
-  const filtered = items.filter(x=>{
-    const s=getSupplier(x.maker,x.name);
-    if(supplier==='jioyoung') return s==='대전지오영';
-    if(supplier==='daesungpam') return s==='대성팜';
-    if(supplier==='baekje') return s==='백제약품';
-  });
+  let filtered = items;
+  if(supplier!=='all'){
+    filtered = items.filter(x=>{
+      const s=getSupplier(x.maker,x.name);
+      if(supplier==='jioyoung') return s==='대전지오영';
+      if(supplier==='daesungpam') return s==='대성팜';
+      if(supplier==='baekje') return s==='백제약품';
+    });
+  }
+  if(filtered.length===0){ alert('해당 주문 항목이 없습니다.'); return; }
 
-  if(filtered.length===0){ alert('해당 도매상 주문 항목이 없습니다.'); return; }
+  const orderData = filtered.map(x=>({
+    name: x.name,
+    code: DRUG_CODE_MAP[x.name]||'',
+    qty: x.orderQty,
+    unit: x.unitVal,
+    supplier: getSupplier(x.maker,x.name)
+  }));
 
-  const urls = {
-    jioyoung: 'https://cpl.geoweb.kr',
-    daesungpam: 'https://www.daesungpam.com',
-    baekje: 'https://www.baekje.com'
-  };
+  cloudSave('pending_order', {items:orderData, savedAt:new Date().toISOString()});
 
-  // 주문 데이터를 sessionStorage에 저장 후 새창 열기
-  const orderData = filtered.map(x=>({name:x.name, qty:x.orderQty, unit:x.unitVal}));
-  localStorage.setItem('auto_order_data', JSON.stringify(orderData));
-  localStorage.setItem('auto_order_supplier', supplier);
-
-  alert(`📋 주문 데이터 준비 완료 (${filtered.length}품목)\n\n1. 확인을 누르면 ${supplier==='jioyoung'?'지오영':supplier==='daesungpam'?'대성팜':'백제약품'} 사이트가 열립니다\n2. 사이트에서 북마클릿을 클릭하면 자동입력이 시작됩니다`);
-  window.open(urls[supplier], '_blank');
+  const msg = `✅ ${filtered.length}품목 클라우드 저장 완료!\n\n약국 PC에서:\n1. 바로팜(baropharm.com/order) 열기\n2. 다빈도주문 탭 클릭\n3. F12 콘솔 열기\n4. 스크립트 붙여넣기 → 실행`;
+  alert(msg);
 }
 
 function autoSetMinStockG2(){
