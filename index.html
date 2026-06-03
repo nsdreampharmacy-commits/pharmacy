@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="version" content="1778749813">
+<meta name="version" content="1780530355">
 <link rel="manifest" href="/pharmacy/manifest.json">
 <title>논산드림약국 주문관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -314,23 +314,16 @@ async function cloudLoad(key){
 
 async function syncFromCloud(){
   try{
-    // 최소필요량
+    // 최소필요량 (클라우드 우선 - 항상 동기화)
     const ms = await cloudLoad('min_stock');
     if(ms && typeof ms === 'object' && Object.keys(ms).length > 0){
-      const local = getMinStock();
-      const localCount = Object.keys(local).length;
-      const cloudCount = Object.keys(ms).length;
-      // 클라우드가 더 많은 데이터를 가지고 있을 때만 병합 (로컬 우선)
-      if(cloudCount > localCount){
-        const merged = {...ms, ...local}; // 로컬 우선
-        localStorage.setItem('min_stock', JSON.stringify(merged));
-      }
+      localStorage.setItem('min_stock', JSON.stringify(ms));
     }
     // 1군 추가 등록
+    // 1군 추가 약품 (클라우드 우선 - 항상 동기화)
     const cg = await cloudLoad('custom_g1');
     if(cg && Array.isArray(cg) && cg.length > 0){
-      const localCg = getCustomG1();
-      if(localCg.length === 0) localStorage.setItem('custom_g1', JSON.stringify(cg));
+      localStorage.setItem('custom_g1', JSON.stringify(cg));
     }
     // 직전 주문서
     const lo = await cloudLoad('last_order');
