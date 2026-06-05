@@ -595,10 +595,14 @@ function updateCardStyle(idx){
   stockEl.style.color=color;
 }
 
+const STEP5_DRUGS = new Set(['알마겔현탁액', '알마겔에프현탁액', '스타빅현탁액']);
+function getStep(name){ for(const k of STEP5_DRUGS){ if(name.includes(k)) return 5; } return 1; }
+
 function incOrder(idx,ui,unit){
   const d=drugs[idx];
-  if(ui===null){ d.orderQty=(d.orderQty||0)+1; const el=document.getElementById('oi'+idx); if(el){el.value=d.orderQty;el.classList.add('filled');} }
-  else { if(!d.orderQtyArr) d.orderQtyArr=[0,0]; d.orderQtyArr[ui]=(d.orderQtyArr[ui]||0)+1; const el=document.getElementById('oi'+idx+'_'+ui); if(el){el.value=d.orderQtyArr[ui];el.classList.add('filled');} }
+  const step=getStep(d.name);
+  if(ui===null){ d.orderQty=(d.orderQty||0)+step; const el=document.getElementById('oi'+idx); if(el){el.value=d.orderQty;el.classList.add('filled');} }
+  else { if(!d.orderQtyArr) d.orderQtyArr=[0,0]; d.orderQtyArr[ui]=(d.orderQtyArr[ui]||0)+step; const el=document.getElementById('oi'+idx+'_'+ui); if(el){el.value=d.orderQtyArr[ui];el.classList.add('filled');} }
   updateCardStyle(idx);
 }
 function setOrder(idx,val){ if(drugs[idx]) drugs[idx].orderQty=parseInt(val)||0; }
@@ -639,18 +643,8 @@ function openAutoOrder(source){
 function saveAutoOrder(supplier, source){
   document.querySelector('div[style*="rgba(0,0,0,0.5)"]')?.remove();
   const items = source==='last' ? (getLastOrder()?.items||[]) : getOrderedList();
-  let filtered = items;
-  if(supplier!=='all'){
-    filtered = items.filter(x=>{
-      const s=getSupplier(x.maker,x.name);
-      if(supplier==='jioyoung') return s==='대전지오영';
-      if(supplier==='daesungpam') return s==='대성팜';
-      if(supplier==='baekje') return s==='백제약품';
-    });
-  }
-  if(filtered.length===0){ alert('해당 주문 항목이 없습니다.'); return; }
 
-  const orderData = filtered.map(x=>({
+  const toData = arr => arr.map(x=>({
     name: x.name,
     code: DRUG_CODE_MAP[x.name]||'',
     qty: x.orderQty,
@@ -658,9 +652,32 @@ function saveAutoOrder(supplier, source){
     supplier: getSupplier(x.maker,x.name)
   }));
 
-  cloudSave('pending_order', {items:orderData, savedAt:new Date().toISOString()});
+  if(supplier==='all'){
+    // 전체 저장: 도매상별로 각각 다른 키에 저장
+    const ds = items.filter(x=>getSupplier(x.maker,x.name)==='대성팜');
+    const bj = items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
+    const jy = items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
+    const tj = items.filter(x=>getSupplier(x.maker,x.name)==='티제이팜');
+    if(items.length===0){ alert('주문 항목이 없습니다.'); return; }
+    if(ds.length) cloudSave('pending_order', {items:toData(ds), savedAt:new Date().toISOString()});
+    if(bj.length) cloudSave('pending_order_bj', {items:toData(bj), savedAt:new Date().toISOString()});
+    if(jy.length) cloudSave('pending_order_jy', {items:toData(jy), savedAt:new Date().toISOString()});
+    if(tj.length) cloudSave('pending_order_tj', {items:toData(tj), savedAt:new Date().toISOString()});
+    alert(`✅ 전체 ${items.length}품목 저장 완료!\n대성팜 ${ds.length} / 백제약품 ${bj.length} / 지오영 ${jy.length}${tj.length?' / 티제이팜 '+tj.length:''}\n\n약국 PC에서 각 도매상 사이트에 접속 후 자동주문을 시작하세요.`);
+    return;
+  }
 
-  alert(`✅ ${filtered.length}품목 클라우드 저장 완료!\n\n약국 PC에서 대성팜(cpl.geoweb.kr)에 접속 후\n자동주문 패널에서 ▶ 시작을 누르세요.`);
+  let filtered = items.filter(x=>{
+    const s=getSupplier(x.maker,x.name);
+    if(supplier==='jioyoung') return s==='대전지오영';
+    if(supplier==='daesungpam') return s==='대성팜';
+    if(supplier==='baekje') return s==='백제약품';
+  });
+  if(filtered.length===0){ alert('해당 주문 항목이 없습니다.'); return; }
+
+  const key = supplier==='baekje' ? 'pending_order_bj' : supplier==='jioyoung' ? 'pending_order_jy' : 'pending_order';
+  cloudSave(key, {items:toData(filtered), savedAt:new Date().toISOString()});
+  alert(`✅ ${filtered.length}품목 클라우드 저장 완료!\n\n약국 PC에서 각 도매상 사이트에 접속 후\n자동주문 패널에서 ▶ 시작을 누르세요.`);
 }
 
 function autoSetMinStockG2(){
