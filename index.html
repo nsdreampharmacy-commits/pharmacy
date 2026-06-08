@@ -250,6 +250,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
         <div class="stat" style="padding:7px 10px;flex:1;min-width:55px"><div class="stat-label" style="color:#1565c0">대성팜</div><div class="stat-value" style="font-size:16px;color:#1565c0" id="last-d1">0</div></div>
         <div class="stat" style="padding:7px 10px;flex:1;min-width:55px"><div class="stat-label" style="color:#16a34a">백제약품</div><div class="stat-value" style="font-size:16px;color:#16a34a" id="last-d2">0</div></div>
         <div class="stat" style="padding:7px 10px;flex:1;min-width:55px"><div class="stat-label" style="color:#7e22ce">지오영</div><div class="stat-value" style="font-size:16px;color:#7e22ce" id="last-d3">0</div></div>
+        <div class="stat" style="padding:7px 10px;flex:1;min-width:55px"><div class="stat-label" style="color:#c2410c">티제이팜</div><div class="stat-value" style="font-size:16px;color:#c2410c" id="last-d4">0</div></div>
       </div>
       <div class="table-wrap">
         <table>
@@ -1063,13 +1064,14 @@ function renderLastOrder(){
   const e1=document.getElementById('last-d1');if(e1)e1.textContent=d1.length;
   const e2=document.getElementById('last-d2');if(e2)e2.textContent=d2.length;
   const e3=document.getElementById('last-d3');if(e3)e3.textContent=d3.length;
+  const e4=document.getElementById('last-d4');if(e4)e4.textContent=d4.length;
   function secRows(list,color,bg,title){
     if(!list||!list.length)return '';
     let r='<tr><td colspan="4" style="background:'+bg+';color:'+color+';font-weight:700;font-size:13px;padding:5px 8px">&#9658; '+title+' ('+list.length+'&#54488;&#47785;)</td></tr>';
     list.forEach((d,i)=>{if(!d)return;r+='<tr><td style="text-align:center;color:#9ca3af;font-size:11px">'+(i+1)+'</td><td class="drug-name">'+shortName(d.name||'')+'</td><td style="text-align:center;font-weight:800;color:#dc2626">'+(d.orderQty||0)+'</td><td style="text-align:center;font-weight:700;color:#1565c0">'+(d.unitVal||'-')+'</td></tr>';});
     return r;
   }
-  document.getElementById('last-tbody').innerHTML=secRows(d1,'#1565c0','#e8f0fe','대성팜')+secRows(d2,'#2e7d32','#e8f5e9','백제약품')+secRows(d3,'#6a1b9a','#f3e5f5','대전지오영');
+  document.getElementById('last-tbody').innerHTML=secRows(d1,'#1565c0','#e8f0fe','대성팜')+secRows(d2,'#2e7d32','#e8f5e9','백제약품')+secRows(d3,'#6a1b9a','#f3e5f5','대전지오영')+secRows(d4,'#c2410c','#fff7ed','티제이팜');
 }
 function clearLastOrder(){
   if(!confirm('직전 주문서를 삭제할까요?')) return;
