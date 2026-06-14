@@ -206,6 +206,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
           <div id="ord-date-badge" class="time-badge am-badge" style="margin-top:3px;display:inline-block"></div>
         </div>
         <button class="btn" style="background:#7e22ce;color:white;border-color:#7e22ce;font-weight:700;flex-shrink:0" onclick="autoOrderAndComplete()">🤖 자동주문&완료</button>
+        <button class="btn" style="background:white;color:#dc2626;border-color:#dc2626;font-weight:700;flex-shrink:0" onclick="clearOrder()">🗑️ 삭제</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
         <div style="display:flex;flex-wrap:wrap;gap:4px;padding:6px 4px">
@@ -687,6 +688,13 @@ function forceSyncToCloud(){
 
 function openAutoOrder(source){
   saveAutoOrder('all', source);
+}
+
+function clearOrder(){
+  if(!confirm('주문서를 삭제하시겠습니까?')) return;
+  window._orderedList = [];
+  document.getElementById('ord-data').style.display = 'none';
+  document.getElementById('ord-nodata').style.display = 'block';
 }
 
 function autoOrderAndComplete(){
