@@ -117,6 +117,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
   <div class="tab" onclick="switchTab(2)">③ 2군 주문</div>
   <div class="tab" onclick="switchTab(3)" id="tab-new-drug" style="display:none">⭐ 처음 사용</div>
   <div class="tab" onclick="switchTab(4)">④ 주문서</div>
+  <div class="tab" onclick="autoOrderByMinStock()" style="color:#7c3aed;font-weight:700">⚡ 최소필요량이상 자동주문</div>
 </div>
 
 <div class="content">
@@ -927,6 +928,47 @@ function clearGroupConfirm(){
   if(currentGroup===1) renderG1();
   else if(currentGroup===2) renderG2();
   else renderNew();
+}
+
+// 최소필요량 이상 자동주문
+function autoOrderByMinStock(){
+  if(!drugs||!drugs.length){ alert('먼저 파일을 업로드해주세요.'); return; }
+  const minStockMap=getMinStock();
+  let count=0;
+  drugs.forEach((d,idx)=>{
+    const minVal=minStockMap[d.name]||0;
+    if(!minVal) return;
+    const stock=d.stock==='-'?0:d.stock;
+    if(stock>=minVal) return; // 이미 충분
+    const need=minVal-stock; // 부족한 양
+    const norm=normalize(d.name);
+    const unit=getUnit(d.name)||UNIT_MAP[norm];
+    if(Array.isArray(unit)){
+      if(!d.orderQtyArr) d.orderQtyArr=[0,0];
+      // 첫 번째 단위로 계산
+      const u=unit[0];
+      const qty=Math.ceil(need/u);
+      d.orderQtyArr[0]=qty;
+      const el=document.getElementById('oi'+idx+'_0');
+      if(el){el.value=qty;el.classList.add('filled');}
+    } else if(unit){
+      const qty=Math.ceil(need/unit);
+      d.orderQty=qty;
+      const el=document.getElementById('oi'+idx);
+      if(el){el.value=qty;el.classList.add('filled');}
+    } else {
+      d.orderQty=need;
+      const el=document.getElementById('oi'+idx);
+      if(el){el.value=need;el.classList.add('filled');}
+    }
+    updateCardStyle(idx);
+    count++;
+  });
+  if(count===0){ alert('최소필요량보다 부족한 약품이 없습니다.'); return; }
+  // 1군 화면으로 이동해서 결과 확인
+  renderG1(); renderG2();
+  switchTab(1);
+  alert('⚡ 자동주문 완료!\n총 '+count+'개 약품의 수량이 입력되었습니다.\n확인 후 주문서 생성 버튼을 눌러주세요.');
 }
 
 // 주문서 생성
