@@ -207,7 +207,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
           <div style="font-size:13px;font-weight:700">📋 주문서</div>
           <div id="ord-date-badge" class="time-badge am-badge" style="margin-top:3px;display:inline-block"></div>
         </div>
-        <button class="btn" style="background:#7e22ce;color:white;border-color:#7e22ce;font-weight:700;flex-shrink:0" onclick="autoOrderAndComplete()">🤖 자동주문&완료</button>
+        <button id="btn-auto-order" class="btn" style="background:#7e22ce;color:white;border-color:#7e22ce;font-weight:700;flex-shrink:0" onclick="autoOrderAndComplete()" disabled title="클라우드 로드 중...">🤖 자동주문&완료</button>
         <button class="btn" style="background:white;color:#dc2626;border-color:#dc2626;font-weight:700;flex-shrink:0" onclick="clearOrder()">🗑️ 삭제</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
@@ -500,7 +500,7 @@ setInterval(updateClock,1000); updateClock();
 })();
 updateLastOrderBtn();
 // 백그라운드 클라우드 동기화
-setTimeout(()=>{ syncFromCloud(); }, 1000);
+setTimeout(()=>{ syncFromCloud().then(()=>{ const b=document.getElementById('btn-auto-order'); if(b){b.disabled=false;b.title='';} }); }, 1000);
 
 // 당겨서 새로고침 방지
 let lastY=0;
