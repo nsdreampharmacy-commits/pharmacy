@@ -1218,7 +1218,26 @@ function switchTab(idx){
   if(idx===2){ const has=drugs.length>0; document.getElementById('g2-nodata').style.display=has?'none':'block'; document.getElementById('g2-data').style.display=has?'block':'none'; if(has) renderG2(); }
   if(idx===3){ const has=drugs.filter(d=>d.group===0).length>0; document.getElementById('new-nodata').style.display=has?'none':'block'; document.getElementById('new-data').style.display=has?'block':'none'; if(has) renderNew(); renderCustomG1List(); }
   if(idx===5){ renderLastOrder(); }
-  if(idx===6){ renderDrugMgr(''); }
+  if(idx===6){ 
+    const searchEl = document.getElementById('drug-mgr-search');
+    if(searchEl) searchEl.value='';
+    document.getElementById('drug-mgr-list').innerHTML='<div style="text-align:center;padding:20px;color:#6b7280">☁️ 클라우드에서 불러오는 중...</div>';
+    (async()=>{
+      const [dc1,dc2,du,sn] = await Promise.all([
+        cloudLoad('drug_codes_1'), cloudLoad('drug_codes_2'),
+        cloudLoad('drug_units'), cloudLoad('supplier_norm')
+      ]);
+      if(dc1) Object.assign(DRUG_CODE_MAP, dc1);
+      if(dc2) Object.assign(DRUG_CODE_MAP, dc2);
+      if(du) Object.assign(UNIT_MAP, du);
+      if(sn){ 
+        BAEKJE_NORM.clear(); JY_NORM.clear(); TJ_NORM.clear();
+        applySupplierNorm(sn);
+        localStorage.setItem('supplier_norm', JSON.stringify(sn));
+      }
+      renderDrugMgr('');
+    })();
+  }
 }
 
 // ===== 약품관리 =====
