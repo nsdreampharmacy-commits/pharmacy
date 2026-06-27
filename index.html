@@ -117,6 +117,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
   <div class="tab" onclick="switchTab(2)">③ 2군 주문</div>
   <div class="tab" onclick="switchTab(3)" id="tab-new-drug" style="display:none">⭐ 처음 사용</div>
   <div class="tab" onclick="switchTab(4)">④ 주문서</div>
+  <div class="tab" onclick="switchTab(6)" style="color:#0369a1">⚙️ 약품관리</div>
 </div>
 
 <div class="content">
@@ -264,6 +265,19 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
         </table>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="tab6-content" style="display:none;padding:10px;padding-bottom:30px">
+  <div class="card">
+    <div class="toolbar">
+      <div class="toolbar-title" style="color:#0369a1">⚙️ 약품관리</div>
+    </div>
+    <div class="search-wrap" style="margin-bottom:8px">
+      <input type="text" id="drug-mgr-search" class="search-box" placeholder="🔍 약품명 검색..." oninput="renderDrugMgr(this.value)">
+    </div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:8px">1군+2군 전체 약품 · 코드/주문단위/최소필요량/공급업체 수정 후 저장하면 클라우드에 바로 반영됩니다</div>
+    <div id="drug-mgr-list"></div>
   </div>
 </div>
 
@@ -1161,10 +1175,10 @@ function clearLastOrder(){
 }
 
 function switchTab(idx){
-  // 탭 컨텐츠 처리 (직전주문서는 별도)
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
   document.querySelectorAll('.tab-content').forEach((c,i)=>c.classList.toggle('active',i===idx));
   document.getElementById('tab5-content').style.display=idx===5?'block':'none';
+  document.getElementById('tab6-content').style.display=idx===6?'block':'none';
   const fb=document.getElementById('fixed-bottom');
   if(idx===1||idx===2||idx===3){ fb.classList.add('visible'); currentGroup=idx===1?1:idx===2?2:9; document.querySelector('.content').style.paddingBottom='80px'; }
   else { fb.classList.remove('visible'); document.querySelector('.content').style.paddingBottom='10px'; }
@@ -1172,6 +1186,86 @@ function switchTab(idx){
   if(idx===2){ const has=drugs.length>0; document.getElementById('g2-nodata').style.display=has?'none':'block'; document.getElementById('g2-data').style.display=has?'block':'none'; if(has) renderG2(); }
   if(idx===3){ const has=drugs.filter(d=>d.group===0).length>0; document.getElementById('new-nodata').style.display=has?'none':'block'; document.getElementById('new-data').style.display=has?'block':'none'; if(has) renderNew(); renderCustomG1List(); }
   if(idx===5){ renderLastOrder(); }
+  if(idx===6){
+    const searchEl=document.getElementById('drug-mgr-search');
+    if(searchEl) searchEl.value='';
+    document.getElementById('drug-mgr-list').innerHTML='<div style="text-align:center;padding:20px;color:#6b7280">☁️ 클라우드에서 불러오는 중...</div>';
+    (async()=>{
+      const [dc1,dc2,du,sn,ms]=await Promise.all([
+        cloudLoad('drug_codes_1'),cloudLoad('drug_codes_2'),
+        cloudLoad('drug_units'),cloudLoad('supplier_norm'),cloudLoad('min_stock')
+      ]);
+      if(dc1) Object.assign(DRUG_CODE_MAP,dc1);
+      if(dc2) Object.assign(DRUG_CODE_MAP,dc2);
+      if(du) Object.assign(UNIT_MAP,du);
+      if(ms) localStorage.setItem('min_stock',JSON.stringify(ms));
+      if(sn){ BAEKJE_NORM.clear(); JY_NORM.clear(); TJ_NORM.clear(); applySupplierNorm(sn); localStorage.setItem('supplier_norm',JSON.stringify(sn)); }
+      renderDrugMgr('');
+    })();
+  }
+}
+
+// ===== 약품관리 =====
+function renderDrugMgr(filter){
+  const allNames=[...new Set([...GROUP1,...GROUP2].filter(n=>n&&typeof n==='string'))].sort();
+  const filtered=filter?allNames.filter(n=>n.includes(filter)):allNames;
+  const el=document.getElementById('drug-mgr-list');
+  if(!filtered.length){ el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:20px">검색 결과 없음</div>'; return; }
+  const SUPPLIERS=['대성팜','백제약품','대전지오영','티제이팜'];
+  const supColors={'대성팜':'#1565c0','백제약품':'#16a34a','대전지오영':'#7c3aed','티제이팜':'#c2410c'};
+  el.innerHTML=filtered.map((name,i)=>{
+    const code=DRUG_CODE_MAP[name]||DRUG_CODE_MAP[baseName(name)]||'';
+    const unit=UNIT_MAP[name]||UNIT_MAP[baseName(name)]||'';
+    const minStock=getMinStock()[name]||getMinStock()[baseName(name)]||'';
+    const sup=getSupplier('',name);
+    const supColor=supColors[sup]||'#555';
+    const grp=GROUP1.includes(name)?'1군':'2군';
+    return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff">
+      <div style="font-size:12px;font-weight:700;margin-bottom:6px;line-height:1.4">${shortName(name)} <span style="font-size:10px;color:#9ca3af;font-weight:400">${grp}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">
+        <div><div style="font-size:10px;color:#6b7280;margin-bottom:2px">보험코드</div>
+          <input id="dm-code-${i}" type="text" value="${code}" placeholder="없음(비급여)" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 7px;font-size:12px;box-sizing:border-box"></div>
+        <div><div style="font-size:10px;color:#6b7280;margin-bottom:2px">주문단위</div>
+          <input id="dm-unit-${i}" type="number" value="${unit}" placeholder="단위" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 7px;font-size:12px;box-sizing:border-box"></div>
+        <div><div style="font-size:10px;color:#6b7280;margin-bottom:2px">최소필요량</div>
+          <input id="dm-min-${i}" type="number" value="${minStock}" placeholder="미설정" style="width:100%;border:1px solid #d1d5db;border-radius:5px;padding:5px 7px;font-size:12px;box-sizing:border-box"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="font-size:10px;color:#6b7280">공급업체</div>
+        <select id="dm-sup-${i}" style="flex:1;border:1px solid #d1d5db;border-radius:5px;padding:4px 6px;font-size:12px;color:${supColor}">
+          ${SUPPLIERS.map(s=>`<option value="${s}" ${s===sup?'selected':''} style="color:${supColors[s]}">${s}</option>`).join('')}
+        </select>
+        <button onclick="saveDrugMgrRow('${name.replace(/'/g,"\\'").replace(/\|/g,'\\|')}',${i})" style="background:#0369a1;color:white;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700;white-space:nowrap">저장</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function saveDrugMgrRow(name,i){
+  const code=document.getElementById('dm-code-'+i).value.trim();
+  const unit=parseInt(document.getElementById('dm-unit-'+i).value)||null;
+  const minVal=parseInt(document.getElementById('dm-min-'+i).value)||null;
+  const sup=document.getElementById('dm-sup-'+i).value;
+  const bn=baseName(name);
+
+  if(code){ saveDrugCode(bn,code); }
+  else { delete DRUG_CODE_MAP[bn]; localStorage.setItem('drug_codes',JSON.stringify(DRUG_CODE_MAP)); const e=Object.entries(DRUG_CODE_MAP); cloudSave('drug_codes_1',Object.fromEntries(e.slice(0,700))); cloudSave('drug_codes_2',Object.fromEntries(e.slice(700))); }
+
+  if(unit){ saveDrugUnit(bn,unit); }
+  else { delete UNIT_MAP[bn]; localStorage.setItem('drug_units',JSON.stringify(UNIT_MAP)); cloudSave('drug_units',UNIT_MAP); }
+
+  setMinStock(bn,minVal);
+
+  const sn=getSupplierNorm()||{bj:[],jy:[],tj:[]};
+  ['bj','jy','tj'].forEach(k=>{ sn[k]=(sn[k]||[]).filter(x=>!bn.includes(x)&&!name.includes(x)); });
+  const key=bn.length>4?bn.substring(0,4):bn;
+  if(sup==='백제약품'){ if(!sn.bj.includes(key)) sn.bj.push(key); }
+  else if(sup==='대전지오영'){ if(!sn.jy.includes(key)) sn.jy.push(key); }
+  else if(sup==='티제이팜'){ if(!sn.tj.includes(key)) sn.tj.push(key); }
+  saveSupplierNorm(sn); applySupplierNorm(sn);
+
+  const btn=document.querySelector(`button[onclick*="saveDrugMgrRow('${name.replace(/'/g,"\\'").replace(/\|/g,'\\|')}"]`);
+  if(btn){ btn.textContent='✅ 저장됨'; btn.style.background='#16a34a'; setTimeout(()=>{ btn.textContent='저장'; btn.style.background='#0369a1'; },1500); }
 }
 </script>
 </body>
