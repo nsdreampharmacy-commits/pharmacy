@@ -154,7 +154,8 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
   <div id="g1-data" style="display:none">
     <div class="card">
       <div class="toolbar">
-        <div class="toolbar-title">1군 약품 <span style="background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700">매일 직접 확인</span> <span id="g1-time-badge" class="time-badge am-badge" style="margin-left:4px"></span></div>
+        <div class="toolbar-title">1군 약품 <span style="background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700">매일 직접 확인</span></div>
+        <button class="btn btn-sm" style="background:#7c3aed;color:white;border-color:#7c3aed;white-space:nowrap" onclick="autoOrderByMinStock(1)">⚡ 최소필요량이상 자동담기</button>
       </div>
       <div class="search-wrap"><input type="text" class="search-box" placeholder="🔍 약품명 검색..." oninput="filterG1(this.value)"></div>
       <p style="font-size:11px;color:#6b7280;margin-bottom:8px">눈으로 실재고 확인 후 주문수량 입력 · 단위버튼 클릭하면 자동 입력</p>
@@ -170,6 +171,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
     <div class="card">
       <div class="toolbar">
         <div class="toolbar-title">2군 약품 <span style="background:#dbeafe;color:#1e3a8a;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700">주기적 확인</span></div>
+        <button class="btn btn-sm" style="background:#7c3aed;color:white;border-color:#7c3aed;white-space:nowrap" onclick="autoOrderByMinStock(2)">⚡ 최소필요량이상 자동담기</button>
       </div>
       <div class="search-wrap"><input type="text" class="search-box" placeholder="🔍 약품명 검색..." oninput="filterG2(this.value)"></div>
       <p style="font-size:11px;color:#6b7280;margin-bottom:8px">필요한 약품만 주문수량 입력</p>
@@ -293,15 +295,7 @@ const GROUP2=["가리온정10밀리그램(베포타스틴베실산염)_(10mg/1�
 let DRUG_CODE_MAP = {};
 let UNIT_MAP = {};
 
-// 병/PTP 포장 구분 약품: UNIT_MAP에 배열로 등록됨
-// 로제듀오정: ['30병','30PTP'], 기넥신에프정80mg: ['100PTP','500']
-const PACK_TYPE_DRUGS = new Set([
-  '로제듀오정10/2.5밀리그램(에제티미브,로수바스타틴칼슘)_(1정)',
-  '로제듀오정10/20밀리그램_(1정)',
-  '로제듀오정10/10밀리그램_(1정)',
-  '로제듀오정10/5밀리그램_(1정)',
-  '기넥신에프정80mg',
-]);
+
 const JIOYOUNG_DRUGS=new Set(["노보래피드주100단위/밀리리터(인슐린아스파트)_(1000unit/10mL)", "노보래피드플렉스펜주100단위/밀리리터(인슐린아스파트)_(300unit/3mL)", "노보믹스30플렉스펜주100단위/밀리리터(인슐린아스파트,유전자재조합)_(300unit/3mL)", "란투스주솔로스타(인슐린글라진,유전자재조합)_(휴먼인슐린,300I.U/3mL)", "레버미어플렉스펜주100단위/밀리리터_(인슐린디터머,300unit/3mL)", "리조덱플렉스터치주100단위/밀리리터_(1카트리지)", "오젬픽프리필드펜(세마글루티드)_(2.01mg/1.5mL)", "인슈라타드HM주100단위/밀리리터(휴먼인슐린)_(1KI.U/10mL)", "줄토피플렉스터치주_(3mL)", "투제오주솔로스타(인슐린글라진,유전자재조합)_(휴먼인슐린,450unit/1.5mL)", "트레시바플렉스터치주100단위/밀리리터(인슐린데글루덱)_(300unit/3mL)", "트루리시티0.75밀리그램/0.5밀리리터(둘라글루타이드,유전자재조합)일회용펜_(0.75mg/0.5mL)", "트루리시티1.5밀리그램/0.5밀리리터(둘라글루타이드,유전자재조합)일회용펜_(1.5mg/0.5mL)", "피아스프플렉스터치주100단위/밀리리터(인슐린아스파트)_(300unit/3mL)", "휴마로그믹스25퀵펜주100단위/밀리리터(유전자재조합,인슐린라이스프로25%와인슐린라이스프로프로타민현탁액75%혼합액)_(300unit/3mL)", "휴마로그믹스50퀵펜주100단위/밀리리터(인슐린라이스프로50%와인슐린라이스프로프로타민현탁액50%혼합액)_(300unit/3mL)", "휴마로그주100단위/밀리리터(인슐린라이스프로)_(1000unit/10mL)", "휴마로그퀵펜주100단위/밀리리터(인슐린라이스프로,유전자재조합)_(300unit/3mL)", "휴물린엔퀵펜주100단위/밀리리터(휴먼인슐린,유전자재조합)_(300unit/3mL)", "데파스정0.5밀리그람(에티졸람)_(0.5mg/1정)", "데파스정1밀리그람(에티졸람)_(1mg/1정)", "리보트릴정(클로나제팜)_(0.5mg/1정)", "삼진디아제팜정2밀리그람_(2mg/1정)", "삼진디아제팜정5밀리그람_(5mg/1정)", "스틸녹스CR정12.5밀리그램(졸피뎀타르타르산염)_(12.5mg/1정)", "스틸녹스CR정6.25밀리그램(졸피뎀타르타르산염)_(6.25mg/1정)", "스틸녹스정10밀리그램(졸피뎀타르타르산염)_(10mg/1정)", "아티반정1밀리그람(로라제팜)_(1mg/1정)", "자나팜정0.125밀리그램(알프라졸람)_(0.125mg/1정)", "자나팜정0.25밀리그람(알프라졸람)_(0.25mg/1정)", "자나팜정0.4밀리그람(알프라졸람)_(0.4mg/1정)", "자나팜정0.5밀리그람(알프라졸람)_(0.5mg/1정)", "자나팜정1밀리그람(알프라졸람)_(1mg/1정)", "잘레딥캡슐10밀리그램(잘레플론)_(10mg/1캡슐)", "잘레딥캡슐5밀리그램(잘레플론)_(5mg/1캡슐)", "조피스타정1밀리그램(에스조피클론)_(1mg/1정)", "졸민정0.125밀리그람(트리아졸람)_(0.125mg/1정)", "졸민정0.25밀리그램(트리아졸람)_(0.25mg/1정)", "졸피드정10밀리그램(졸피뎀타르타르산염)_(10mg/1정)", "졸피드정5밀리그램(졸피뎀타르타르산염)_(5mg/1정)", "큐시미아캡슐7.5mg/46mg", "펜타인정", "휴터민정"]);
 const JIOYOUNG_NORM=new Set(["큐시미아캡슐7.5mg/46mg", "졸민정0.125밀리그람", "졸피드정10밀리그램", "휴마로그퀵펜주100단위/밀리리터", "트루리시티1.5밀리그램/0.5밀리리터", "삼진디아제팜정5밀리그람", "펜타인정", "졸민정0.25밀리그램", "스틸녹스CR정12.5밀리그램", "노보래피드플렉스펜주100단위/밀리리터", "리조덱플렉스터치주100단위/밀리리터", "졸피드정5밀리그램", "노보래피드주100단위/밀리리터", "데파스정0.5밀리그람", "조피스타정1밀리그램", "피아스프플렉스터치주100단위/밀리리터", "자나팜정0.25밀리그람", "스틸녹스CR정6.25밀리그램", "트루리시티0.75밀리그램/0.5밀리리터", "자나팜정0.5밀리그람", "란투스주솔로스타", "데파스정1밀리그람", "스틸녹스정10밀리그램", "트레시바플렉스터치주100단위/밀리리터", "잘레딥캡슐5밀리그램", "오젬픽프리필드펜", "잘레딥캡슐10밀리그램", "자나팜정1밀리그람", "리보트릴정", "휴물린엔퀵펜주100단위/밀리리터", "휴마로그믹스50퀵펜주100단위/밀리리터", "휴터민정", "노보믹스30플렉스펜주100단위/밀리리터", "휴마로그믹스25퀵펜주100단위/밀리리터", "자나팜정0.125밀리그램", "휴마로그주100단위/밀리리터", "투제오주솔로스타", "자나팜정0.4밀리그람", "삼진디아제팜정2밀리그람", "레버미어플렉스펜주100단위/밀리리터", "아티반정1밀리그람", "줄토피플렉스터치주", "인슈라타드HM주100단위/밀리리터"]);
 const BAEKJE_MAKERS=['한올바이오파마','대웅제약','대웅바이오','삼오제약'];
@@ -505,8 +499,6 @@ function updateClock(){
   const badge=document.getElementById('order-badge');
   badge.textContent=h<13?'🌅 오전 주문':'🌆 오후 주문';
   badge.style.cssText=h<13?'background:#fef9c3;color:#854d0e;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700':'background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700';
-  const tb=document.getElementById('g1-time-badge');
-  if(tb){ tb.textContent=h<13?'오전 주문':'오후 주문'; tb.className='time-badge '+(h<13?'am-badge':'pm-badge'); }
 }
 setInterval(updateClock,1000); updateClock();
 
@@ -525,29 +517,11 @@ setInterval(updateClock,1000); updateClock();
 })();
 updateLastOrderBtn();
 // 백그라운드 클라우드 동기화
-setTimeout(()=>{ syncFromCloud().then ? syncFromCloud().then(()=>{
+setTimeout(()=>{ syncFromCloud().then(()=>{
   const b=document.getElementById('btn-auto-order'); if(b){b.disabled=false;b.title='';}
-  // 스타빅현탁액500ML 코드/단위 없으면 자동 등록
   if(!DRUG_CODE_MAP['스타빅현탁액500ML']){ saveDrugCode('스타빅현탁액500ML','641607481'); }
   if(!UNIT_MAP['스타빅현탁액500ML']){ saveDrugUnit('스타빅현탁액500ML',500); }
-  // 포장구분 약품 UNIT_MAP 배열 등록 (없을 때만)
-  const packUnits = {
-    '로제듀오정10/2.5밀리그램(에제티미브,로수바스타틴칼슘)_(1정)': ['30병','30PTP'],
-    '로제듀오정10/20밀리그램_(1정)': ['30병','30PTP'],
-    '로제듀오정10/10밀리그램_(1정)': ['30병','30PTP'],
-    '로제듀오정10/5밀리그램_(1정)': ['30병','30PTP'],
-    '기넥신에프정80mg': ['100PTP','500'],
-  };
-  let changed = false;
-  for(const [name, units] of Object.entries(packUnits)){
-    const cur = UNIT_MAP[name];
-    if(!Array.isArray(cur)){
-      UNIT_MAP[name] = units;
-      changed = true;
-    }
-  }
-  if(changed){ localStorage.setItem('drug_units',JSON.stringify(UNIT_MAP)); cloudSave('drug_units',UNIT_MAP); }
-}) : syncFromCloud(); }, 1000);
+}); }, 1000);
 
 // 당겨서 새로고침 방지
 let lastY=0;
@@ -753,41 +727,13 @@ function saveAutoOrder(supplier, source){
   document.querySelector('div[style*="rgba(0,0,0,0.5)"]')?.remove();
   const items = source==='last' ? (getLastOrder()?.items||[]) : getOrderedList();
 
-  const toData = arr => {
-    const result = [];
-    arr.forEach(x => {
-      const pipe = String(x.name).indexOf('|');
-      const packType = x.packType || (pipe>-1 ? x.name.substring(pipe+1) : null);
-      const norm = normalize(x.name);
-      const unit = getUnit(x.name)||UNIT_MAP[norm];
-      if(Array.isArray(unit) && Array.isArray(x.orderQtyArr)){
-        // 배열 규격: 각 규격별로 수량이 있으면 별도 항목 생성
-        unit.forEach((u, ui) => {
-          const qty = x.orderQtyArr[ui] || 0;
-          if(qty > 0){
-            result.push({
-              name: baseName(x.name),
-              code: getCode(x.name),
-              qty: qty,
-              unit: u,
-              supplier: getSupplier(x.maker, x.name),
-              packType: u  // 규격명 자체가 포장 구분
-            });
-          }
-        });
-      } else {
-        result.push({
-          name: baseName(x.name),
-          code: getCode(x.name),
-          qty: x.orderQty,
-          unit: x.unitVal,
-          supplier: getSupplier(x.maker, x.name),
-          packType: packType
-        });
-      }
-    });
-    return result;
-  };
+  const toData = arr => arr.map(x=>({
+    name: baseName(x.name),
+    code: getCode(x.name),
+    qty: x.orderQty,
+    unit: x.unitVal,
+    supplier: getSupplier(x.maker,x.name)
+  }));
 
   if(supplier==='all'){
     // 전체 저장: 도매상별로 각각 다른 키에 저장
@@ -1002,6 +948,44 @@ function clearGroupConfirm(){
   if(currentGroup===1) renderG1();
   else if(currentGroup===2) renderG2();
   else renderNew();
+}
+
+// 최소필요량 이상 자동담기
+function autoOrderByMinStock(group){
+  if(!drugs||!drugs.length){ alert('먼저 파일을 업로드해주세요.'); return; }
+  const minStockMap=getMinStock();
+  let count=0;
+  drugs.forEach((d,idx)=>{
+    if(d.group!==group) return;
+    const minVal=minStockMap[d.name]||0;
+    if(!minVal) return;
+    const stock=d.stock==='-'?0:d.stock;
+    if(stock>=minVal) return;
+    const need=minVal-stock;
+    const norm=normalize(d.name);
+    const unit=getUnit(d.name)||UNIT_MAP[norm];
+    if(Array.isArray(unit)){
+      if(!d.orderQtyArr) d.orderQtyArr=[0,0];
+      const u=unit[0];
+      const qty=Math.ceil(need/u);
+      d.orderQtyArr[0]=qty;
+      const el=document.getElementById('oi'+idx+'_0');
+      if(el){el.value=qty;el.classList.add('filled');}
+    } else if(unit){
+      const qty=Math.ceil(need/unit);
+      d.orderQty=qty;
+      const el=document.getElementById('oi'+idx);
+      if(el){el.value=qty;el.classList.add('filled');}
+    } else {
+      d.orderQty=need;
+      const el=document.getElementById('oi'+idx);
+      if(el){el.value=need;el.classList.add('filled');}
+    }
+    updateCardStyle(idx);
+    count++;
+  });
+  if(count===0){ alert('최소필요량보다 부족한 약품이 없습니다.'); return; }
+  alert('⚡ 자동담기 완료!\n총 '+count+'개 약품의 수량이 입력되었습니다.\n확인 후 주문서 생성 버튼을 눌러주세요.');
 }
 
 // 주문서 생성
