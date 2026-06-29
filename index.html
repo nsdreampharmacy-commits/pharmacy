@@ -1052,9 +1052,10 @@ function buildOrder(){
     return list.map((d,i)=>{
       const gi=startIdx+i;
       const code=getCode(d.name);
-      return `<tr id="ord-row-${gi}">
+      const packTag=d.packLabel?` <span style="background:#dbeafe;color:#1d4ed8;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:700">${d.packLabel}</span>`:'';
+      return `<tr id="ord-row-${gi}">`
         <td style="text-align:center;color:#9ca3af;font-size:11px">${gi+1}</td>
-        <td style="font-size:12px;font-weight:600;line-height:1.4;word-break:break-all" title="${d.name}">${shortName(d.name)}${code?`<br><span style="font-size:10px;color:#6b7280;font-weight:400">${code}</span>`:''}</td>
+        <td style="font-size:12px;font-weight:600;line-height:1.4;word-break:break-all" title="${d.name}">${shortName(d.name)}${packTag}${code?`<br><span style="font-size:10px;color:#6b7280;font-weight:400">${code}</span>`:''}</td>
         <td style="text-align:center;font-weight:700;color:#1565c0">${d.unitVal}</td>
         <td style="text-align:center;font-weight:800;color:#dc2626;font-size:15px">${d.orderQty}</td>
       </tr>`;
@@ -1231,7 +1232,7 @@ function renderLastOrder(){
   function secRows(list,color,bg,title){
     if(!list||!list.length)return '';
     let r='<tr><td colspan="4" style="background:'+bg+';color:'+color+';font-weight:700;font-size:13px;padding:5px 8px">&#9658; '+title+' ('+list.length+'품목)</td></tr>';
-    list.forEach((d,i)=>{if(!d)return;const _code=d.code||getCode(d.name);const codeStr=_code?'<div style="font-size:10px;color:#9ca3af">'+_code+'</div>':'';r+='<tr><td style="text-align:center;color:#9ca3af;font-size:11px">'+(i+1)+'</td><td class="drug-name">'+shortName(d.name||'')+codeStr+'</td><td style="text-align:center;font-weight:700;color:#1565c0">'+(d.unitVal||'-')+'</td><td style="text-align:center;font-weight:800;color:#dc2626">'+(d.orderQty||0)+'</td></tr>';});
+    list.forEach((d,i)=>{if(!d)return;const _code=d.code||getCode(d.name);const codeStr=_code?'<div style="font-size:10px;color:#9ca3af">'+_code+'</div>':'';const packTag=d.packLabel?' <span style="background:#dbeafe;color:#1d4ed8;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:700">'+d.packLabel+'</span>':'';r+='<tr><td style="text-align:center;color:#9ca3af;font-size:11px">'+(i+1)+'</td><td class="drug-name">'+shortName(d.name||'')+codeStr+'</td><td style="text-align:center;font-weight:700;color:#1565c0">'+(d.unitVal||'-')+'</td><td style="text-align:center;font-weight:800;color:#dc2626">'+(d.orderQty||0)+'</td></tr>';});
     return r;
   }
   document.getElementById('last-tbody').innerHTML=secRows(d1,'#1565c0','#e8f0fe','대성팜')+secRows(d2,'#2e7d32','#e8f5e9','백제약품')+secRows(d3,'#6a1b9a','#f3e5f5','대전지오영')+secRows(d4,'#c2410c','#fff7ed','티제이팜');
