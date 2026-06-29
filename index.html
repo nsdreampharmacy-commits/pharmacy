@@ -1027,7 +1027,7 @@ function getOrderedList(){
     if(Array.isArray(unit)){
       const labels = PACK_LABEL_MAP[d.name] || unit.map(u=>String(u));
       unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0) ordered.push({...d,orderQty:qty,unitVal:u,packLabel:labels[ui]}); });
-    } else { if(d.orderQty>0) ordered.push({...d,unitVal:unit||'-'}); }
+    } else { if(d.orderQty>0) ordered.push({...d,unitVal:unit||'-',packLabel:null}); }
   });
   return ordered;
 }
