@@ -587,12 +587,23 @@ function processFile(file){
       const qtyKey=keys.find(k=>k==='합계수량')||keys.find(k=>k.includes('합계수량'))||keys.find(k=>k==='조제수량')||keys.find(k=>k.includes('조제수량'))||keys.find(k=>k.includes('조제/판매수량'))||keys.find(k=>k==='판매수량');
       const stockKey=keys.find(k=>k==='현재고')||keys.find(k=>k.includes('현재고'))||keys.find(k=>k.includes('재고수량'));
       const makerKey=keys.find(k=>k==='제약회사')||keys.find(k=>k.includes('제약회사'))||keys.find(k=>k.includes('제약사'));
+      const codeKey=keys.find(k=>k==='보험코드')||keys.find(k=>k.includes('보험코드'))||keys.find(k=>k.includes('약품코드'));
       if(!nameKey){ alert('약품명 컬럼을 찾을 수 없습니다.'); return; }
       if(!qtyKey){ alert('수량 컬럼을 찾을 수 없습니다.\n컬럼: '+keys.join(', ')); return; }
       const customG1Names=getCustomG1().map(x=>x.name);
+      // 코드 기반 약품명 재매핑 (이름은 같지만 코드로 구분되는 약품)
+      const CODE_NAME_REMAP = {
+        '641607171': '스타빅현탁액-포',
+        '641607481': '스타빅현탁액-병',
+      };
       drugs=rows.map(r=>{
-        const name=String(r[nameKey]||'').trim();
+        let name=String(r[nameKey]||'').trim();
         if(!name||/^\d+$/.test(name)) return null;
+        const code=codeKey?String(r[codeKey]||'').trim():'';
+        // 코드 기반 이름 재매핑 (스타빅현탁액 등 동일이름-다른코드 약품 처리)
+        if(code && CODE_NAME_REMAP[code] && name.includes('스타빅')){
+          name = CODE_NAME_REMAP[code];
+        }
         const qty=parseFloat(String(r[qtyKey]||'0').replace(/,/g,''))||0;
         const stockRaw=stockKey?parseFloat(String(r[stockKey]||'').replace(/,/g,'')):NaN;
         const stock=stockKey?(isNaN(stockRaw)?'-':stockRaw):'-';
