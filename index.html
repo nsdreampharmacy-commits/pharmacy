@@ -15,7 +15,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:'맑은 고딕',sans-serif;background:#f0f2f5;font-size:14px;color:#1a1a2e;overscroll-behavior-y:none}
+html{overflow-x:hidden}
+body{font-family:'맑은 고딕',sans-serif;background:#f0f2f5;font-size:14px;color:#1a1a2e;overscroll-behavior-y:none;overflow-x:hidden;width:100%}
 header{background:linear-gradient(135deg,#1565c0,#0d47a1);color:white;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
 .header-left{display:flex;align-items:center;gap:8px}
 header h1{font-size:15px;font-weight:700}
@@ -324,6 +325,11 @@ let currentGroup=1;
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzUw1ogPSkIjZ1RWk04zgRllWhRrrQeg1j38Vizq6e6iOVv11A-KCA_vPCJkNYBZO6rIw/exec';
 
 function cloudSave(key, value){
+  // 저장 시각 기록: cloudSave는 응답을 확인하지 않는 fire-and-forget 방식이라
+  // 저장 직후 곧바로 클라우드에서 다시 읽으면 아직 반영되지 않은 예전 값을 받아
+  // 방금 설정한 값이 사라진 것처럼 보이는 문제가 있었음. 최근에 로컬에서 바꾼
+  // 키는 일정 시간 클라우드 값으로 덮어쓰지 않도록 recentlyChangedLocally()에서 사용.
+  try{ localStorage.setItem('_ts_'+key, String(Date.now())); }catch(e){}
   try{
     fetch(GAS_URL, {
       method:'POST',
@@ -332,6 +338,13 @@ function cloudSave(key, value){
       headers:{'Content-Type':'text/plain'}
     }).catch(()=>{});
   }catch(e){}
+}
+
+function recentlyChangedLocally(key, withinMs){
+  try{
+    const t=parseInt(localStorage.getItem('_ts_'+key)||'0',10);
+    return (Date.now()-t) < (withinMs||30000);
+  }catch(e){ return false; }
 }
 
 async function cloudLoad(key){
@@ -345,24 +358,24 @@ async function cloudLoad(key){
 
 async function syncFromCloud(){
   try{
-    // 최소필요량 (클라우드 우선 - 항상 동기화)
+    // 최소필요량 (클라우드 우선 - 단, 방금 로컬에서 바꾼 값은 덮어쓰지 않음)
     const ms = await cloudLoad('min_stock');
-    if(ms && typeof ms === 'object' && Object.keys(ms).length > 0){
+    if(ms && typeof ms === 'object' && Object.keys(ms).length > 0 && !recentlyChangedLocally('min_stock')){
       localStorage.setItem('min_stock', JSON.stringify(ms));
     }
     // 1군 추가 등록
-    // 1군 추가 약품 (클라우드 우선 - 항상 동기화)
+    // 1군 추가 약품 (클라우드 우선 - 단, 방금 로컬에서 바꾼 값은 덮어쓰지 않음)
     const cg = await cloudLoad('custom_g1');
-    if(cg && Array.isArray(cg) && cg.length > 0){
+    if(cg && Array.isArray(cg) && cg.length > 0 && !recentlyChangedLocally('custom_g1')){
       localStorage.setItem('custom_g1', JSON.stringify(cg));
     }
     // 약품 코드 (분할 저장: drug_codes_1, drug_codes_2)
     const dc1 = await cloudLoad('drug_codes_1');
     const dc2 = await cloudLoad('drug_codes_2');
-    if(dc1 && typeof dc1 === 'object'){
+    if(dc1 && typeof dc1 === 'object' && !recentlyChangedLocally('drug_codes_1')){
       Object.assign(DRUG_CODE_MAP, dc1);
     }
-    if(dc2 && typeof dc2 === 'object'){
+    if(dc2 && typeof dc2 === 'object' && !recentlyChangedLocally('drug_codes_2')){
       Object.assign(DRUG_CODE_MAP, dc2);
     }
     if((dc1||dc2)){
@@ -373,18 +386,20 @@ async function syncFromCloud(){
     }
     // 약품 규격
     const du = await cloudLoad('drug_units');
-    if(du && typeof du === 'object' && Object.keys(du).length > 0){
+    if(du && typeof du === 'object' && Object.keys(du).length > 0 && !recentlyChangedLocally('drug_units')){
       Object.assign(UNIT_MAP, du);
       localStorage.setItem('drug_units', JSON.stringify(du));
     } else {
       const cached2 = localStorage.getItem('drug_units');
       if(cached2) Object.assign(UNIT_MAP, JSON.parse(cached2));
     }
-    // 공급사 배정 (클라우드 우선 - 항상 동기화)
+    // 공급사 배정 (클라우드 우선 - 단, 방금 로컬에서 바꾼 값은 덮어쓰지 않음)
     const sn = await cloudLoad('supplier_norm');
-    if(sn && typeof sn === 'object') {
+    if(sn && typeof sn === 'object' && !recentlyChangedLocally('supplier_norm')) {
       localStorage.setItem('supplier_norm', JSON.stringify(sn));
       applySupplierNorm(sn);
+    } else if(sn && typeof sn === 'object'){
+      applySupplierNorm(getSupplierNorm()||sn);
     } else {
       // 최초 1회: 기본값 클라우드에 저장
       const defaultNorm = {
@@ -549,6 +564,10 @@ setTimeout(()=>{ syncFromCloud().then(()=>{
   // 기넥신에프정80mg: 100/500 배열 단위 등록
   if(!Array.isArray(UNIT_MAP['기넥신에프정80mg'])){ UNIT_MAP['기넥신에프정80mg']=[100,500]; unitChanged=true; }
   if(unitChanged){ localStorage.setItem('drug_units',JSON.stringify(UNIT_MAP)); cloudSave('drug_units',UNIT_MAP); }
+  // 클라우드 동기화가 파일 업로드보다 늦게 끝난 경우를 대비해, 동기화 완료 시점에
+  // 이미 표시 중인 화면을 최신 코드/단위/최소필요량 기준으로 다시 그림
+  if(drugs && drugs.length){ renderG1(); renderG2(); renderNew(); }
+  renderCustomG1List();
 }); }, 1000);
 
 // 당겨서 새로고침 방지
@@ -1277,11 +1296,12 @@ function switchTab(idx){
         cloudLoad('drug_codes_1'),cloudLoad('drug_codes_2'),
         cloudLoad('drug_units'),cloudLoad('supplier_norm'),cloudLoad('min_stock')
       ]);
-      if(dc1) Object.assign(DRUG_CODE_MAP,dc1);
-      if(dc2) Object.assign(DRUG_CODE_MAP,dc2);
-      if(du) Object.assign(UNIT_MAP,du);
-      if(ms) localStorage.setItem('min_stock',JSON.stringify(ms));
-      if(sn){ BAEKJE_NORM.clear(); JY_NORM.clear(); TJ_NORM.clear(); applySupplierNorm(sn); localStorage.setItem('supplier_norm',JSON.stringify(sn)); }
+      // 방금 이 화면(약품관리)에서 저장한 값은 아직 클라우드에 반영 안 됐을 수 있으므로 덮어쓰지 않음
+      if(dc1 && !recentlyChangedLocally('drug_codes_1')) Object.assign(DRUG_CODE_MAP,dc1);
+      if(dc2 && !recentlyChangedLocally('drug_codes_2')) Object.assign(DRUG_CODE_MAP,dc2);
+      if(du && !recentlyChangedLocally('drug_units')) Object.assign(UNIT_MAP,du);
+      if(ms && !recentlyChangedLocally('min_stock')) localStorage.setItem('min_stock',JSON.stringify(ms));
+      if(sn && !recentlyChangedLocally('supplier_norm')){ BAEKJE_NORM.clear(); JY_NORM.clear(); TJ_NORM.clear(); applySupplierNorm(sn); localStorage.setItem('supplier_norm',JSON.stringify(sn)); }
       renderDrugMgr('');
     })();
   }
@@ -1289,19 +1309,21 @@ function switchTab(idx){
 
 // ===== 약품관리 =====
 function renderDrugMgr(filter){
-  const allNames=[...new Set([...GROUP1,...GROUP2].filter(n=>n&&typeof n==='string'))].sort();
+  // 처음 사용 약품에서 "1군 등록"한 커스텀 약품도 검색 대상에 포함
+  const customNames=getCustomG1().map(x=>x.name).filter(n=>n&&typeof n==='string');
+  const allNames=[...new Set([...GROUP1,...GROUP2,...customNames].filter(n=>n&&typeof n==='string'))].sort();
   const filtered=filter?allNames.filter(n=>n.includes(filter)):allNames;
   const el=document.getElementById('drug-mgr-list');
   if(!filtered.length){ el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:20px">검색 결과 없음</div>'; return; }
   const SUPPLIERS=['대성팜','백제약품','대전지오영','티제이팜'];
   const supColors={'대성팜':'#1565c0','백제약품':'#16a34a','대전지오영':'#7c3aed','티제이팜':'#c2410c'};
   el.innerHTML=filtered.map((name,i)=>{
-    const code=DRUG_CODE_MAP[name]||DRUG_CODE_MAP[baseName(name)]||'';
-    const unit=UNIT_MAP[name]||UNIT_MAP[baseName(name)]||'';
+    const code=getCode(name);
+    const unit=getUnit(name)||'';
     const minStock=getMinStock()[name]||getMinStock()[baseName(name)]||'';
     const sup=getSupplier('',name);
     const supColor=supColors[sup]||'#555';
-    const grp=GROUP1.includes(name)?'1군':'2군';
+    const grp=(GROUP1.includes(name)||customNames.includes(name))?'1군':'2군';
     return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff">
       <div style="font-size:12px;font-weight:700;margin-bottom:6px;line-height:1.4">${name} <span style="font-size:10px;color:#9ca3af;font-weight:400">${grp}</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">
@@ -1329,6 +1351,17 @@ function saveDrugMgrRow(name,i){
   const minVal=parseInt(document.getElementById('dm-min-'+i).value)||null;
   const sup=document.getElementById('dm-sup-'+i).value;
   const bn=baseName(name);
+
+  // "처음 사용 약품"에서 1군 등록한 커스텀 약품은 code/unit이 항목 자체에 저장되어
+  // getCode()/getUnit()에서 전역 맵보다 우선 적용되므로, 여기서 수정해도 실제로
+  // 반영되도록 해당 항목도 함께 갱신
+  const customList=getCustomG1();
+  const customEntry=customList.find(x=>x.name===name||x.name===bn);
+  if(customEntry){
+    if(code) customEntry.code=code; else delete customEntry.code;
+    if(unit) customEntry.unit=unit; else delete customEntry.unit;
+    saveCustomG1(customList);
+  }
 
   if(code){ saveDrugCode(bn,code); }
   else { delete DRUG_CODE_MAP[bn]; localStorage.setItem('drug_codes',JSON.stringify(DRUG_CODE_MAP)); const e=Object.entries(DRUG_CODE_MAP); cloudSave('drug_codes_1',Object.fromEntries(e.slice(0,700))); cloudSave('drug_codes_2',Object.fromEntries(e.slice(700))); }
