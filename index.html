@@ -1340,11 +1340,22 @@ function renderDrugMgr(filter){
   if(!filtered.length){ el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:20px">검색 결과 없음</div>'; return; }
   const SUPPLIERS=['대성팜','백제약품','대전지오영','티제이팜'];
   const supColors={'대성팜':'#1565c0','백제약품':'#16a34a','대전지오영':'#7c3aed','티제이팜':'#c2410c'};
+  // 대웅제약/한올바이오파마 등 제조사 기반 배정 규칙은 실제 주문 시 그날 업로드한 엑셀의
+  // "제약회사" 컬럼으로 판단되는데, 이 화면은 그 정보가 없어 기본값(대성팜)으로 잘못 보였음.
+  // 오늘 업로드된 데이터(drugs)가 있으면 거기서 제약회사 정보를 가져와 미리보기 정확도를 높임.
+  const makerLookup={};
+  (drugs||[]).forEach(d=>{
+    if(!d.maker) return;
+    if(!makerLookup[d.name]) makerLookup[d.name]=d.maker;
+    const bn=baseName(d.name);
+    if(!makerLookup[bn]) makerLookup[bn]=d.maker;
+  });
   el.innerHTML=filtered.map((name,i)=>{
     const code=getCode(name);
     const unit=getUnit(name)||'';
     const minStock=getMinStock()[name]||getMinStock()[baseName(name)]||'';
-    const sup=getSupplier('',name);
+    const maker=makerLookup[name]||makerLookup[baseName(name)]||'';
+    const sup=getSupplier(maker,name);
     const supColor=supColors[sup]||'#555';
     const grp=(GROUP1.includes(name)||customNames.includes(name))?'1군':'2군';
     return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff">
