@@ -1406,8 +1406,12 @@ function saveDrugMgrRow(name,i){
   setMinStock(bn,minVal);
 
   const sn=getSupplierNorm()||{bj:[],jy:[],tj:[]};
-  ['bj','jy','tj'].forEach(k=>{ sn[k]=(sn[k]||[]).filter(x=>!bn.includes(x)&&!name.includes(x)); });
   const key=bn.length>4?bn.substring(0,4):bn;
+  // 이 약의 "정확한" 배정 키만 다른 목록에서 제거. 예전엔 이름에 포함되는지(부분일치)로
+  // 지웠는데, 그러면 예를 들어 "코자정"을 지오영으로 설정한 뒤 "코자정100밀리그램"을
+  // 다른 도매상으로 설정하면 "코자정100밀리그램"이 "코자정"을 부분 포함한다는 이유로
+  // "코자정"의 설정까지 같이 지워지는 문제가 있었음.
+  ['bj','jy','tj'].forEach(k=>{ sn[k]=(sn[k]||[]).filter(x=>x!==key); });
   if(sup==='백제약품'){ if(!sn.bj.includes(key)) sn.bj.push(key); }
   else if(sup==='대전지오영'){ if(!sn.jy.includes(key)) sn.jy.push(key); }
   else if(sup==='티제이팜'){ if(!sn.tj.includes(key)) sn.tj.push(key); }
