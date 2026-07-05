@@ -346,13 +346,22 @@ function recentlyChangedLocally(key, withinMs){
   }catch(e){ return false; }
 }
 
-async function cloudLoad(key){
+async function cloudLoad(key, retriesLeft){
+  if(retriesLeft===undefined) retriesLeft=2;
   try{
     const res = await fetch(GAS_URL + '?action=get&key=' + encodeURIComponent(key), {cache:'no-cache'});
     const text = await res.text();
     if(!text || text === '{}' || text === 'null') return null;
     return JSON.parse(text);
-  }catch(e){ return null; }
+  }catch(e){
+    // 구글 서버가 가끔 정상 JSON 대신 리다이렉트/오류 페이지를 돌려줄 때가 있어서
+    // (예: 규격이 나오다 안나오다 하던 문제의 원인) 바로 포기하지 않고 몇 번 재시도함
+    if(retriesLeft>0){
+      await new Promise(r=>setTimeout(r,400));
+      return cloudLoad(key, retriesLeft-1);
+    }
+    return null;
+  }
 }
 
 async function syncFromCloud(){
