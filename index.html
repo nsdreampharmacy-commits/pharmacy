@@ -218,6 +218,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
           <span style="font-size:12px;color:#16a34a">백제 <b id="o-g2">0</b></span>
           <span style="font-size:12px;color:#7e22ce">지오영 <b id="o-g3">0</b></span>
           <span style="font-size:12px;color:#c2410c">티제이팜 <b id="o-g4">0</b></span>
+          <span style="font-size:12px;color:#0d9488">동원약품 <b id="o-g5">0</b></span>
         </div>
       </div>
       <div class="table-wrap" style="max-height:600px">
@@ -254,6 +255,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
         <div class="stat" style="padding:7px 10px;flex:1;min-width:55px"><div class="stat-label" style="color:#16a34a">백제약품</div><div class="stat-value" style="font-size:16px;color:#16a34a" id="last-d2">0</div></div>
         <div class="stat" style="padding:7px 10px;flex:1;min-width:55px"><div class="stat-label" style="color:#7e22ce">지오영</div><div class="stat-value" style="font-size:16px;color:#7e22ce" id="last-d3">0</div></div>
         <div class="stat" style="padding:7px 10px;flex:1;min-width:55px"><div class="stat-label" style="color:#c2410c">티제이팜</div><div class="stat-value" style="font-size:16px;color:#c2410c" id="last-d4">0</div></div>
+        <div class="stat" style="padding:7px 10px;flex:1;min-width:55px"><div class="stat-label" style="color:#0d9488">동원약품</div><div class="stat-value" style="font-size:16px;color:#0d9488" id="last-d5">0</div></div>
       </div>
       <div class="table-wrap">
         <table>
@@ -310,6 +312,7 @@ const BAEKJE_MAKERS=['한올바이오파마','대웅제약','대웅바이오','�
 const BAEKJE_NORM=new Set([]);
 const JY_NORM=new Set([]);
 const TJ_NORM=new Set([]);
+const DW_NORM=new Set([]);
 const JIOYOUNG_EXTRA=new Set([]);
 
 const G1_SET=new Set(GROUP1);
@@ -467,6 +470,7 @@ function applySupplierNorm(data){
   if(data.je) data.je.forEach(k=>JIOYOUNG_EXTRA.add(k));
   if(data.bj) data.bj.forEach(k=>BAEKJE_NORM.add(k));
   if(data.tj) data.tj.forEach(k=>TJ_NORM.add(k));
+  if(data.dw) data.dw.forEach(k=>DW_NORM.add(k));
 }
 function updateLastOrderBtn(){
   const data=getLastOrder();
@@ -510,6 +514,8 @@ function getSupplier(maker, name){
     for(const bn of BAEKJE_NORM){ if(name.includes(bn)||norm.includes(bn)) return '백제약품'; }
     // 티제이팜 체크
     for(const tj of TJ_NORM){ if(name.includes(tj)||norm.includes(tj)) return '티제이팜'; }
+    // 동원약품 체크
+    for(const dw of DW_NORM){ if(name.includes(dw)||norm.includes(dw)) return '동원약품'; }
     // 지오영 체크
     if(JIOYOUNG_DRUGS.has(name)) return '대전지오영';
     if(JIOYOUNG_NORM.has(norm)) return '대전지오영';
@@ -833,16 +839,19 @@ function saveAutoOrder(supplier, source){
     const bj = items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
     const jy = items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
     const tj = items.filter(x=>getSupplier(x.maker,x.name)==='티제이팜');
+    const dw = items.filter(x=>getSupplier(x.maker,x.name)==='동원약품');
     if(items.length===0){ alert('주문 항목이 없습니다.'); return; }
     if(ds.length) cloudSave('pending_order', {items:toData(ds), savedAt:new Date().toISOString()});
     if(bj.length) cloudSave('pending_order_bj', {items:toData(bj), savedAt:new Date().toISOString()});
     if(jy.length) cloudSave('pending_order_jy', {items:toData(jy), savedAt:new Date().toISOString()});
     if(tj.length) cloudSave('pending_order_tj', {items:toData(tj), savedAt:new Date().toISOString()});
+    if(dw.length) cloudSave('pending_order_dw', {items:toData(dw), savedAt:new Date().toISOString()});
     const parts=[];
     if(ds.length) parts.push(`대성팜 ${ds.length}품목`);
     if(bj.length) parts.push(`백제약품 ${bj.length}품목`);
     if(jy.length) parts.push(`지오영 ${jy.length}품목`);
     if(tj.length) parts.push(`티제이팜 ${tj.length}품목`);
+    if(dw.length) parts.push(`동원약품 ${dw.length}품목`);
     alert(`✅ 클라우드 저장 완료!\n${parts.join(' / ')}\n\n약국 PC에서 각 도매상 사이트에 접속 후 자동주문을 시작하세요.`);
     return;
   }
@@ -1106,11 +1115,13 @@ function buildOrder(){
   const bj=ordered.filter(d=>getSupplier(d.maker,d.name)==='백제약품');
   const jy=ordered.filter(d=>getSupplier(d.maker,d.name)==='대전지오영');
   const tj=ordered.filter(d=>getSupplier(d.maker,d.name)==='티제이팜');
+  const dw=ordered.filter(d=>getSupplier(d.maker,d.name)==='동원약품');
   document.getElementById('o-total').textContent=ordered.length;
   document.getElementById('o-g1').textContent=ds.length;
   document.getElementById('o-g2').textContent=bj.length;
   document.getElementById('o-g3').textContent=jy.length;
   document.getElementById('o-g4').textContent=tj.length;
+  document.getElementById('o-g5').textContent=dw.length;
   function makeOrdRows(list,startIdx){
     return list.map((d,i)=>{
       const gi=startIdx+i;
@@ -1129,6 +1140,7 @@ function buildOrder(){
   if(bj.length){ rows+=`<tr><td colspan="5" style="background:#f0fdf4;color:#16a34a;font-weight:700;padding:7px 8px;font-size:12px">🏪 백제약품 (${bj.length}품목)</td></tr>`; rows+=makeOrdRows(bj,ds.length); }
   if(jy.length){ rows+=`<tr><td colspan="5" style="background:#fdf4ff;color:#7e22ce;font-weight:700;padding:7px 8px;font-size:12px">🏪 대전지오영 (${jy.length}품목)</td></tr>`; rows+=makeOrdRows(jy,ds.length+bj.length); }
   if(tj.length){ rows+=`<tr><td colspan="5" style="background:#fff7ed;color:#c2410c;font-weight:700;padding:7px 8px;font-size:12px">🏪 티제이팜 (${tj.length}품목)</td></tr>`; rows+=makeOrdRows(tj,ds.length+bj.length+jy.length); }
+  if(dw.length){ rows+=`<tr><td colspan="5" style="background:#f0fdfa;color:#0d9488;font-weight:700;padding:7px 8px;font-size:12px">🏪 동원약품 (${dw.length}품목)</td></tr>`; rows+=makeOrdRows(dw,ds.length+bj.length+jy.length+tj.length); }
   document.getElementById('ord-tbody').innerHTML=rows;
   document.getElementById('ord-nodata').style.display='none';
   document.getElementById('ord-data').style.display='block';
@@ -1155,6 +1167,7 @@ function updateOrderStats(){
   document.getElementById('o-g1').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='대성팜').length;
   document.getElementById('o-g2').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='백제약품').length;
   if(document.getElementById('o-g4')) document.getElementById('o-g4').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='티제이팜').length;
+  if(document.getElementById('o-g5')) document.getElementById('o-g5').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='동원약품').length;
   document.getElementById('o-g3').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='대전지오영').length;
 }
 function rebuildOrderTable(){
@@ -1170,6 +1183,7 @@ function makePrintHTML(items,titleLabel,dateStr,timeStr){
   const d2=items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
   const d3=items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
   const d4=items.filter(x=>getSupplier(x.maker,x.name)==='티제이팜');
+  const d5=items.filter(x=>getSupplier(x.maker,x.name)==='동원약품');
 
   const colgroup='<colgroup><col style="width:7%"><col><col style="width:12%"><col style="width:14%"></colgroup>';
   const thead='<tr style="background:#ebebeb"><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">#</td><td style="border:1px solid #ccc;padding:4px 6px;font-size:15px;text-align:left;font-weight:700">약품명</td><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">수량</td><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">단위</td></tr>';
@@ -1192,12 +1206,13 @@ function makePrintHTML(items,titleLabel,dateStr,timeStr){
   const ttl=titleLabel==='직전'?'직전 주문서':(titleLabel==='오전'?'오전 주문서':'오후 주문서');
   return '<div style="font-family:Malgun Gothic,sans-serif;padding:8px 12px">'
     +'<h2 style="font-size:20px;font-weight:700;margin-bottom:4px">'+ttl+'</h2>'
-    +'<p style="font-size:14px;color:#555;padding-bottom:5px;border-bottom:2.5px solid #000;margin-bottom:8px">'+dateStr+' '+timeStr+' · 총 '+items.length+'품목 | 대성팜 '+d1.length+' / 백제약품 '+d2.length+' / 지오영 '+d3.length+(d4.length?' / 티제이팜 '+d4.length:'')+'</p>'
+    +'<p style="font-size:14px;color:#555;padding-bottom:5px;border-bottom:2.5px solid #000;margin-bottom:8px">'+dateStr+' '+timeStr+' · 총 '+items.length+'품목 | 대성팜 '+d1.length+' / 백제약품 '+d2.length+' / 지오영 '+d3.length+(d4.length?' / 티제이팜 '+d4.length:'')+(d5.length?' / 동원약품 '+d5.length:'')+'</p>'
     +'<div style="columns:2;column-gap:16px;column-rule:2px solid #888">'
     +makeSec(d1,'대성팜','#1565c0','#e8f0fe')
     +makeSec(d2,'백제약품','#2e7d32','#e8f5e9')
     +makeSec(d3,'대전지오영','#6a1b9a','#f3e5f5')
     +(d4.length?makeSec(d4,'티제이팜','#b45309','#fffbeb'):'')
+    +(d5.length?makeSec(d5,'동원약품','#0d9488','#e6fdf9'):'')
     +'</div></div>';
 }
 
@@ -1287,18 +1302,20 @@ function renderLastOrder(){
   const d2=items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
   const d3=items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
   const d4=items.filter(x=>getSupplier(x.maker,x.name)==='티제이팜');
+  const d5=items.filter(x=>getSupplier(x.maker,x.name)==='동원약품');
   const lt=document.getElementById('last-total');if(lt)lt.textContent=items.length;
   const e1=document.getElementById('last-d1');if(e1)e1.textContent=d1.length;
   const e2=document.getElementById('last-d2');if(e2)e2.textContent=d2.length;
   const e3=document.getElementById('last-d3');if(e3)e3.textContent=d3.length;
   const e4=document.getElementById('last-d4');if(e4)e4.textContent=d4.length;
+  const e5=document.getElementById('last-d5');if(e5)e5.textContent=d5.length;
   function secRows(list,color,bg,title){
     if(!list||!list.length)return '';
     let r='<tr><td colspan="4" style="background:'+bg+';color:'+color+';font-weight:700;font-size:13px;padding:5px 8px">&#9658; '+title+' ('+list.length+'품목)</td></tr>';
     list.forEach((d,i)=>{if(!d)return;const _code=d.code||getCode(d.name);const codeStr=_code?'<div style="font-size:10px;color:#9ca3af">'+_code+'</div>':'';const packTag=d.packLabel?` <span style="background:#dbeafe;color:#1d4ed8;font-size:10px;padding:1px 5px;border-radius:3px;font-weight:700">${d.packLabel}</span>`:'';r+='<tr><td style="text-align:center;color:#9ca3af;font-size:11px">'+(i+1)+'</td><td class="drug-name">'+shortName(d.name||'')+packTag+codeStr+'</td><td style="text-align:center;font-weight:700;color:#1565c0">'+(d.unitVal||'-')+'</td><td style="text-align:center;font-weight:800;color:#dc2626">'+(d.orderQty||0)+'</td></tr>';});
     return r;
   }
-  document.getElementById('last-tbody').innerHTML=secRows(d1,'#1565c0','#e8f0fe','대성팜')+secRows(d2,'#2e7d32','#e8f5e9','백제약품')+secRows(d3,'#6a1b9a','#f3e5f5','대전지오영')+secRows(d4,'#c2410c','#fff7ed','티제이팜');
+  document.getElementById('last-tbody').innerHTML=secRows(d1,'#1565c0','#e8f0fe','대성팜')+secRows(d2,'#2e7d32','#e8f5e9','백제약품')+secRows(d3,'#6a1b9a','#f3e5f5','대전지오영')+secRows(d4,'#c2410c','#fff7ed','티제이팜')+secRows(d5,'#0d9488','#e6fdf9','동원약품');
 }
 function clearLastOrder(){
   if(!confirm('직전 주문서를 삭제할까요?')) return;
@@ -1333,7 +1350,7 @@ function switchTab(idx){
       if(dc2 && !recentlyChangedLocally('drug_codes_2')) Object.assign(DRUG_CODE_MAP,dc2);
       if(du && !recentlyChangedLocally('drug_units')) Object.assign(UNIT_MAP,du);
       if(ms && !recentlyChangedLocally('min_stock')) localStorage.setItem('min_stock',JSON.stringify(ms));
-      if(sn && !recentlyChangedLocally('supplier_norm')){ BAEKJE_NORM.clear(); JY_NORM.clear(); TJ_NORM.clear(); applySupplierNorm(sn); localStorage.setItem('supplier_norm',JSON.stringify(sn)); }
+      if(sn && !recentlyChangedLocally('supplier_norm')){ BAEKJE_NORM.clear(); JY_NORM.clear(); TJ_NORM.clear(); DW_NORM.clear(); applySupplierNorm(sn); localStorage.setItem('supplier_norm',JSON.stringify(sn)); }
       renderDrugMgr('');
     })();
   }
@@ -1347,8 +1364,8 @@ function renderDrugMgr(filter){
   const filtered=filter?allNames.filter(n=>n.includes(filter)):allNames;
   const el=document.getElementById('drug-mgr-list');
   if(!filtered.length){ el.innerHTML='<div style="color:#9ca3af;text-align:center;padding:20px">검색 결과 없음</div>'; return; }
-  const SUPPLIERS=['대성팜','백제약품','대전지오영','티제이팜'];
-  const supColors={'대성팜':'#1565c0','백제약품':'#16a34a','대전지오영':'#7c3aed','티제이팜':'#c2410c'};
+  const SUPPLIERS=['대성팜','백제약품','대전지오영','티제이팜','동원약품'];
+  const supColors={'대성팜':'#1565c0','백제약품':'#16a34a','대전지오영':'#7c3aed','티제이팜':'#c2410c','동원약품':'#0d9488'};
   // 대웅제약/한올바이오파마 등 제조사 기반 배정 규칙은 실제 주문 시 그날 업로드한 엑셀의
   // "제약회사" 컬럼으로 판단되는데, 이 화면은 그 정보가 없어 기본값(대성팜)으로 잘못 보였음.
   // 오늘 업로드된 데이터(drugs)가 있으면 거기서 제약회사 정보를 가져와 미리보기 정확도를 높임.
@@ -1414,16 +1431,17 @@ function saveDrugMgrRow(name,i){
 
   setMinStock(bn,minVal);
 
-  const sn=getSupplierNorm()||{bj:[],jy:[],tj:[]};
+  const sn=getSupplierNorm()||{bj:[],jy:[],tj:[],dw:[]};
   const key=bn.length>4?bn.substring(0,4):bn;
   // 이 약의 "정확한" 배정 키만 다른 목록에서 제거. 예전엔 이름에 포함되는지(부분일치)로
   // 지웠는데, 그러면 예를 들어 "코자정"을 지오영으로 설정한 뒤 "코자정100밀리그램"을
   // 다른 도매상으로 설정하면 "코자정100밀리그램"이 "코자정"을 부분 포함한다는 이유로
   // "코자정"의 설정까지 같이 지워지는 문제가 있었음.
-  ['bj','jy','tj'].forEach(k=>{ sn[k]=(sn[k]||[]).filter(x=>x!==key); });
+  ['bj','jy','tj','dw'].forEach(k=>{ sn[k]=(sn[k]||[]).filter(x=>x!==key); });
   if(sup==='백제약품'){ if(!sn.bj.includes(key)) sn.bj.push(key); }
   else if(sup==='대전지오영'){ if(!sn.jy.includes(key)) sn.jy.push(key); }
   else if(sup==='티제이팜'){ if(!sn.tj.includes(key)) sn.tj.push(key); }
+  else if(sup==='동원약품'){ if(!sn.dw.includes(key)) sn.dw.push(key); }
   saveSupplierNorm(sn); applySupplierNorm(sn);
 
   const btn=document.querySelector(`button[onclick*="saveDrugMgrRow('${name.replace(/'/g,"\\'").replace(/\|/g,'\\|')}"]`);
