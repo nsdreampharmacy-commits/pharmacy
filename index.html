@@ -280,7 +280,6 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
     <div class="search-wrap" style="margin-bottom:8px">
       <input type="text" id="drug-mgr-search" class="search-box" placeholder="🔍 약품명 검색..." oninput="renderDrugMgr(this.value)">
     </div>
-    <button class="btn btn-sm" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;margin-bottom:8px;width:100%" onclick="forceSyncToCloud()">☁️ 지금 이 폰의 최소필요량 전체를 클라우드로 강제 저장</button>
     <div style="font-size:11px;color:#6b7280;margin-bottom:8px">1군+2군 전체 약품 · 코드/주문단위/최소필요량/공급업체 수정 후 저장하면 클라우드에 바로 반영됩니다</div>
     <div id="drug-mgr-list"></div>
   </div>
@@ -881,14 +880,6 @@ function incOrder(idx,ui,unit){
 }
 function setOrder(idx,val){ if(drugs[idx]) drugs[idx].orderQty=parseInt(val)||0; }
 function setOrderArr(idx,ui,val){ if(!drugs[idx].orderQtyArr) drugs[idx].orderQtyArr=[0,0]; drugs[idx].orderQtyArr[ui]=parseInt(val)||0; }
-
-function forceSyncToCloud(){
-  const map=getMinStock();
-  const count=Object.keys(map).length;
-  if(count===0){ alert('저장된 최소필요량이 없습니다.'); return; }
-  cloudSave('min_stock', map);
-  alert('최소필요량 '+count+'개를 클라우드에 저장했습니다.\n잠시 후 스프레드시트에서 확인하세요.');
-}
 
 function openAutoOrder(source){
   saveAutoOrder('all', source);
