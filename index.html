@@ -280,6 +280,7 @@ td{padding:7px 7px;border-bottom:1px solid #f3f4f6;color:#1a1a2e;vertical-align:
     <div class="search-wrap" style="margin-bottom:8px">
       <input type="text" id="drug-mgr-search" class="search-box" placeholder="🔍 약품명 검색..." oninput="renderDrugMgr(this.value)">
     </div>
+    <button class="btn btn-sm" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;margin-bottom:8px;width:100%" onclick="forceSyncToCloud()">☁️ 지금 이 폰의 최소필요량 전체를 클라우드로 강제 저장</button>
     <div style="font-size:11px;color:#6b7280;margin-bottom:8px">1군+2군 전체 약품 · 코드/주문단위/최소필요량/공급업체 수정 후 저장하면 클라우드에 바로 반영됩니다</div>
     <div id="drug-mgr-list"></div>
   </div>
@@ -372,7 +373,10 @@ async function syncFromCloud(){
     // 최소필요량 (클라우드 우선 - 단, 방금 로컬에서 바꾼 값은 덮어쓰지 않음)
     const ms = await cloudLoad('min_stock');
     if(ms && typeof ms === 'object' && Object.keys(ms).length > 0 && !recentlyChangedLocally('min_stock')){
-      localStorage.setItem('min_stock', JSON.stringify(ms));
+      // 클라우드 저장이 가끔 실패해도(구글 서버 응답을 확인할 수 없는 방식이라 실패를 알 수 없음)
+      // 로컬에만 있던 값이 통째로 사라지지 않도록, 덮어쓰지 않고 합쳐서 저장
+      const merged=Object.assign({}, getMinStock(), ms);
+      localStorage.setItem('min_stock', JSON.stringify(merged));
     }
     // 1군 추가 등록
     // 1군 추가 약품 (클라우드 우선 - 단, 방금 로컬에서 바꾼 값은 덮어쓰지 않음)
@@ -1368,7 +1372,7 @@ function switchTab(idx){
       if(dc1 && !recentlyChangedLocally('drug_codes_1')) Object.assign(DRUG_CODE_MAP,dc1);
       if(dc2 && !recentlyChangedLocally('drug_codes_2')) Object.assign(DRUG_CODE_MAP,dc2);
       if(du && !recentlyChangedLocally('drug_units')) Object.assign(UNIT_MAP,du);
-      if(ms && !recentlyChangedLocally('min_stock')) localStorage.setItem('min_stock',JSON.stringify(ms));
+      if(ms && !recentlyChangedLocally('min_stock')) localStorage.setItem('min_stock',JSON.stringify(Object.assign({}, getMinStock(), ms)));
       if(sn && !recentlyChangedLocally('supplier_norm')){ BAEKJE_NORM.clear(); JY_NORM.clear(); TJ_NORM.clear(); DW_NORM.clear(); applySupplierNorm(sn); localStorage.setItem('supplier_norm',JSON.stringify(sn)); }
       renderDrugMgr('');
     })();
