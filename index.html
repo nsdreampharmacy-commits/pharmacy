@@ -315,6 +315,7 @@ const JY_NORM=new Set([]);
 const TJ_NORM=new Set([]);
 const DW_NORM=new Set([]);
 const JIOYOUNG_EXTRA=new Set([]);
+let SUPPLIER_BY_CODE={};
 
 const G1_SET=new Set(GROUP1);
 const G2_SET=new Set(GROUP2);
@@ -444,10 +445,23 @@ async function syncFromCloud(){
 // ===== 클라우드 동기화 끝 =====
 
 function getMinStock(){ try{ return JSON.parse(localStorage.getItem('min_stock')||'{}'); }catch(e){ return {}; } }
-function saveMinStock(map){ localStorage.setItem('min_stock', JSON.stringify(map)); cloudSave('min_stock', map); }
-// 도매상 엑셀의 약품명 표기(성분명/규격 괄호 포함 여부 등)가 예전과 달라져도
-// 예전에 설정해둔 최소필요량을 계속 찾을 수 있도록 이름을 정규화해서 대조
-function lookupMinStock(map, name){
+// 저장 직전 클라우드 최신본을 다시 받아 병합한 뒤 저장 (다른 기기가 그 사이 저장한 내용을 지우지 않기 위함).
+// 클라우드 백엔드는 키를 통째로 교체하는 방식이라, 오래된 로컬 사본 위에 그대로 저장하면 다른 기기의 변경이 사라짐.
+async function saveMinStock(map){
+  localStorage.setItem('min_stock', JSON.stringify(map));
+  cloudSave('min_stock', map);
+}
+async function mergeSaveMinStock(applyChange){
+  const fresh = await cloudLoad('min_stock');
+  const map = Object.assign({}, getMinStock(), fresh||{});
+  applyChange(map);
+  await saveMinStock(map);
+}
+// 약품코드가 있으면 코드로 우선 매칭(약품명 표기가 달라도 안전), 코드가 없는 비급여 약만
+// 이름 기반으로 대조. 이름 대조도, 도매상 엑셀의 표기(성분명/규격 괄호 포함 여부 등)가
+// 예전과 달라져도 예전에 설정해둔 값을 계속 찾을 수 있도록 정규화해서 비교.
+function lookupMinStock(map, name, code){
+  if(code && map[code]!=null) return map[code];
   if(map[name]!=null) return map[name];
   const bn=baseName(name);
   if(map[bn]!=null) return map[bn];
@@ -456,37 +470,69 @@ function lookupMinStock(map, name){
   for(const k in map){ if(normalize(k)===norm) return map[k]; }
   return 0;
 }
-function getMinStockVal(name){ return lookupMinStock(getMinStock(), name); }
-function setMinStock(name, val){
-  const map=getMinStock();
-  const key=normalize(name);
-  // 예전 표기(다른 이름 형식)로 저장된 값이 있으면 하나로 정리
-  Object.keys(map).forEach(k=>{ if(k!==key && normalize(k)===key) delete map[k]; });
-  if(val) map[key]=parseInt(val)||0; else delete map[key];
-  saveMinStock(map);
+function getMinStockVal(name, code){ return lookupMinStock(getMinStock(), name, code); }
+function setMinStock(name, val, code){
+  const key = code || normalize(name);
+  mergeSaveMinStock(map=>{
+    // 예전 표기(다른 이름 형식)로 저장된 값이 있으면 하나로 정리 (코드가 없을 때만: 코드 키는 건드리지 않음)
+    if(!code){ Object.keys(map).forEach(k=>{ if(k!==key && normalize(k)===key) delete map[k]; }); }
+    if(val) map[key]=parseInt(val)||0; else delete map[key];
+  });
 }
 function getCustomG1(){ try{ return JSON.parse(localStorage.getItem('custom_g1')||'[]'); }catch(e){ return []; } }
 function baseName(name){ return String(name).split('|')[0]; }
 function getCode(name){ const bn=baseName(name); const c=getCustomG1().find(x=>x.name===bn||x.name===name); return (c&&c.code)||DRUG_CODE_MAP[name]||DRUG_CODE_MAP[bn]||''; }
-function getUnit(name){ const bn=baseName(name); const c=getCustomG1().find(x=>x.name===bn||x.name===name); return (c&&c.unit)||UNIT_MAP[name]||UNIT_MAP[bn]||null; }
-function saveDrugCode(name, code){
-  DRUG_CODE_MAP[name] = code;
+// 약품코드가 있으면 코드로 우선 매칭(이름 표기가 달라도 안전), 코드가 없는 비급여 약만 이름으로 대조
+function getUnit(name, code){
+  const bn=baseName(name);
+  const c=getCustomG1().find(x=>x.name===bn||x.name===name);
+  if(c&&c.unit) return c.unit;
+  if(code && UNIT_MAP[code]!=null) return UNIT_MAP[code];
+  if(UNIT_MAP[name]!=null) return UNIT_MAP[name];
+  if(UNIT_MAP[bn]!=null) return UNIT_MAP[bn];
+  return null;
+}
+function replaceContents(target, source){ Object.keys(target).forEach(k=>delete target[k]); Object.assign(target, source); }
+// 저장 직전 클라우드 최신본을 다시 받아 병합한 뒤 저장 (다른 기기가 그 사이 저장한 내용을 지우지 않기 위함)
+async function mergeSaveDrugCode(applyChange){
+  const [c1, c2] = await Promise.all([cloudLoad('drug_codes_1'), cloudLoad('drug_codes_2')]);
+  const map = Object.assign({}, DRUG_CODE_MAP, c1||{}, c2||{});
+  applyChange(map);
+  replaceContents(DRUG_CODE_MAP, map);
   localStorage.setItem('drug_codes', JSON.stringify(DRUG_CODE_MAP));
   const entries = Object.entries(DRUG_CODE_MAP);
-  const c1 = Object.fromEntries(entries.slice(0,700));
-  const c2 = Object.fromEntries(entries.slice(700));
-  cloudSave('drug_codes_1', c1);
-  cloudSave('drug_codes_2', c2);
+  cloudSave('drug_codes_1', Object.fromEntries(entries.slice(0,700)));
+  cloudSave('drug_codes_2', Object.fromEntries(entries.slice(700)));
 }
-function saveDrugUnit(name, unit){
-  UNIT_MAP[name] = unit;
+function saveDrugCode(name, code){
+  mergeSaveDrugCode(map=>{ if(code) map[name]=code; else delete map[name]; });
+}
+async function mergeSaveDrugUnit(applyChange){
+  const fresh = await cloudLoad('drug_units');
+  const map = Object.assign({}, UNIT_MAP, fresh||{});
+  applyChange(map);
+  replaceContents(UNIT_MAP, map);
   localStorage.setItem('drug_units', JSON.stringify(UNIT_MAP));
   cloudSave('drug_units', UNIT_MAP);
+}
+function saveDrugUnit(name, unit, code){
+  const key = code || name;
+  mergeSaveDrugUnit(map=>{ if(unit) map[key]=unit; else delete map[key]; });
 }
 function saveCustomG1(list){ localStorage.setItem('custom_g1', JSON.stringify(list)); cloudSave('custom_g1', list); }
 
 function getSupplierNorm(){ try{ return JSON.parse(localStorage.getItem('supplier_norm')||'null'); }catch(e){ return null; } }
 function saveSupplierNorm(data){ localStorage.setItem('supplier_norm', JSON.stringify(data)); cloudSave('supplier_norm', data); }
+// 저장 직전 클라우드 최신본을 다시 받아 병합한 뒤 저장 (다른 기기가 그 사이 저장한 내용을 지우지 않기 위함)
+async function mergeSaveSupplierNorm(applyChange){
+  const fresh = await cloudLoad('supplier_norm') || {};
+  const local = getSupplierNorm() || {};
+  const sn = Object.assign({bj:[],jy:[],tj:[],dw:[]}, local, fresh);
+  sn.byCode = Object.assign({}, local.byCode||{}, fresh.byCode||{});
+  applyChange(sn);
+  saveSupplierNorm(sn);
+  applySupplierNorm(sn);
+}
 function applySupplierNorm(data){
   if(!data) return;
   if(data.jy) data.jy.forEach(k=>JY_NORM.add(k));
@@ -494,6 +540,7 @@ function applySupplierNorm(data){
   if(data.bj) data.bj.forEach(k=>BAEKJE_NORM.add(k));
   if(data.tj) data.tj.forEach(k=>TJ_NORM.add(k));
   if(data.dw) data.dw.forEach(k=>DW_NORM.add(k));
+  if(data.byCode) Object.assign(SUPPLIER_BY_CODE, data.byCode);
 }
 function updateLastOrderBtn(){
   const data=getLastOrder();
@@ -529,7 +576,8 @@ function clearAmOrder(){}
 function normalize(name){ return String(name).split('|')[0].split('(')[0].trim().split('_')[0].trim(); }
 function shortName(name){ const pipe=String(name).indexOf('|'); const tag=pipe>-1?' ['+String(name).substring(pipe+1)+']':''; return normalize(name)+tag; }
 
-function getSupplier(maker, name){
+function getSupplier(maker, name, code){
+  if(code && SUPPLIER_BY_CODE[code]) return SUPPLIER_BY_CODE[code];
   if(name){
     const norm=normalize(name);
     // 백제약품 우선 체크
@@ -562,22 +610,34 @@ function updateClock(){
 }
 setInterval(updateClock,1000); updateClock();
 
-// 앱 로드 시 직전 주문서가 오늘 것이 아니면 삭제
-(function clearOldLastOrder(){
+// 화면에 잠깐이라도 어제 날짜 주문서가 보이지 않도록, 로컬 화면 표시만 우선 정리
+// (클라우드는 아직 안 건드림 - 다른 폰이 오늘 이미 저장해둔 내용을 지울 위험이 있어서
+// 클라우드 반영은 아래 동기화가 끝난 뒤에 최종 판단함)
+(function precheckLastOrderDisplay(){
   const data=getLastOrder();
   if(!data||!data.dateStr) return;
   const today=new Date();
   const todayStr=today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0');
-  const dataDate=data.dateStr.substring(0,10); // "2026.05.21" 형식으로 앞 10자리만
-  if(dataDate!==todayStr){
-    localStorage.removeItem('last_order');
-    cloudSave('last_order',null);
-    updateLastOrderBtn();
-  }
+  if(data.dateStr.substring(0,10)!==todayStr){ document.getElementById('last-nodata').style.display='block'; document.getElementById('last-data').style.display='none'; }
 })();
 updateLastOrderBtn();
 // 백그라운드 클라우드 동기화
 setTimeout(()=>{ syncFromCloud().then(()=>{
+  // 직전 주문서가 오늘 것이 아니면 삭제. 클라우드에서 최신 내용을 받아온 "다음"에 판단해야,
+  // 아직 동기화 전이라 로컬에 어제 날짜만 남아있던 이 폰이 다른 폰이 오늘 이미 저장해둔
+  // 주문서를 실수로 지우는 일이 없음.
+  const loData=getLastOrder();
+  if(loData && loData.dateStr){
+    const today=new Date();
+    const todayStr=today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0');
+    const dataDate=loData.dateStr.substring(0,10);
+    if(dataDate!==todayStr){
+      localStorage.removeItem('last_order');
+      cloudSave('last_order',null);
+    }
+  }
+  updateLastOrderBtn();
+  renderLastOrder();
   const b=document.getElementById('btn-auto-order'); if(b){b.disabled=false;b.title='';}
   // 스타빅현탁액-포 코드/단위/최소필요량
   if(!DRUG_CODE_MAP['스타빅현탁액-포']){ saveDrugCode('스타빅현탁액-포','641607171'); }
@@ -595,12 +655,15 @@ setTimeout(()=>{ syncFromCloud().then(()=>{
     '로제듀오정10/5밀리그램_(1정)',
   ];
   let unitChanged = false;
-  rozeNames.forEach(n => {
-    if(!Array.isArray(UNIT_MAP[n])){ UNIT_MAP[n]=[30,30]; unitChanged=true; }
-  });
+  rozeNames.forEach(n => { if(!Array.isArray(UNIT_MAP[n])) unitChanged=true; });
+  if(!Array.isArray(UNIT_MAP['기넥신에프정80mg'])) unitChanged=true;
   // 기넥신에프정80mg: 100/500 배열 단위 등록
-  if(!Array.isArray(UNIT_MAP['기넥신에프정80mg'])){ UNIT_MAP['기넥신에프정80mg']=[100,500]; unitChanged=true; }
-  if(unitChanged){ localStorage.setItem('drug_units',JSON.stringify(UNIT_MAP)); cloudSave('drug_units',UNIT_MAP); }
+  if(unitChanged){
+    mergeSaveDrugUnit(map=>{
+      rozeNames.forEach(n => { if(!Array.isArray(map[n])) map[n]=[30,30]; });
+      if(!Array.isArray(map['기넥신에프정80mg'])) map['기넥신에프정80mg']=[100,500];
+    });
+  }
   // 클라우드 동기화가 파일 업로드보다 늦게 끝난 경우를 대비해, 동기화 완료 시점에
   // 1군/2군/처음사용 분류를 최신 등록정보 기준으로 다시 계산하고 화면도 다시 그림
   // (등록된 1군 약품인데도 동기화 전이라 "처음 사용"으로 잘못 분류된 채 굳어지는 문제 방지)
@@ -690,7 +753,7 @@ function processFile(file){
         const maker=makerKey?String(r[makerKey]||'').trim():'';
         const norm=normalize(name);
         const group=G1_SET.has(name)||G1_SET.has(norm)||customG1Names.includes(name)?1:(G2_SET.has(name)||G2_SET.has(norm)?2:0);
-        return{name,qty,stock,maker,group,orderQty:0,orderQtyArr:[0,0],memo:''};
+        return{name,code,qty,stock,maker,group,orderQty:0,orderQtyArr:[0,0],memo:''};
       }).filter(Boolean);
       const g1=drugs.filter(d=>d.group===1).length;
       const g2=drugs.filter(d=>d.group===2).length;
@@ -712,9 +775,9 @@ function processFile(file){
 
 function makeRow(d,idx){
   const norm=normalize(d.name);
-  const unit=getUnit(d.name)||UNIT_MAP[norm];
+  const unit=getUnit(d.name,d.code)||UNIT_MAP[norm];
   const minStockMap=getMinStock();
-  const minVal=lookupMinStock(minStockMap,d.name);
+  const minVal=lookupMinStock(minStockMap,d.name,d.code);
   const sv=d.stock;
   let stockBg='#f3f4f6',stockColor='#374151';
   if(sv!=='-'&&minVal){
@@ -782,7 +845,7 @@ function updateCardStyle(idx){
   if(!card) return;
   const d=drugs[idx];
   const norm=normalize(d.name);
-  const unit=getUnit(d.name)||UNIT_MAP[norm];
+  const unit=getUnit(d.name,d.code)||UNIT_MAP[norm];
   const hasOrder=Array.isArray(unit)?(d.orderQtyArr&&(d.orderQtyArr[0]>0||d.orderQtyArr[1]>0)):d.orderQty>0;
   card.classList.toggle('has-order',hasOrder);
   // 현재고 실시간 업데이트
@@ -794,7 +857,7 @@ function updateCardStyle(idx){
   if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ ordered+=(d.orderQtyArr&&d.orderQtyArr[ui]||0)*u; }); }
   else { ordered=(d.orderQty||0)*(unit||0); }
   const newStock=base==='-'?'-':base+ordered;
-  const minVal=getMinStockVal(d.name);
+  const minVal=getMinStockVal(d.name,d.code);
   let bg='#f3f4f6',color='#374151';
   if(newStock!=='-'&&minVal){
     if(newStock<minVal){bg='#fee2e2';color='#991b1b';}
@@ -852,17 +915,17 @@ function saveAutoOrder(supplier, source){
     code: getCode(x.name),
     qty: x.orderQty,
     unit: x.unitVal,
-    supplier: getSupplier(x.maker,x.name),
+    supplier: getSupplier(x.maker,x.name,x.code),
     packType: x.packLabel || null
   }));
 
   if(supplier==='all'){
     // 전체 저장: 도매상별로 각각 다른 키에 저장
-    const ds = items.filter(x=>getSupplier(x.maker,x.name)==='대성팜');
-    const bj = items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
-    const jy = items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
-    const tj = items.filter(x=>getSupplier(x.maker,x.name)==='티제이팜');
-    const dw = items.filter(x=>getSupplier(x.maker,x.name)==='동원약품');
+    const ds = items.filter(x=>getSupplier(x.maker,x.name,x.code)==='대성팜');
+    const bj = items.filter(x=>getSupplier(x.maker,x.name,x.code)==='백제약품');
+    const jy = items.filter(x=>getSupplier(x.maker,x.name,x.code)==='대전지오영');
+    const tj = items.filter(x=>getSupplier(x.maker,x.name,x.code)==='티제이팜');
+    const dw = items.filter(x=>getSupplier(x.maker,x.name,x.code)==='동원약품');
     if(items.length===0){ alert('주문 항목이 없습니다.'); return; }
     if(ds.length) cloudSave('pending_order', {items:toData(ds), savedAt:new Date().toISOString()});
     if(bj.length) cloudSave('pending_order_bj', {items:toData(bj), savedAt:new Date().toISOString()});
@@ -880,7 +943,7 @@ function saveAutoOrder(supplier, source){
   }
 
   let filtered = items.filter(x=>{
-    const s=getSupplier(x.maker,x.name);
+    const s=getSupplier(x.maker,x.name,x.code);
     if(supplier==='jioyoung') return s==='대전지오영';
     if(supplier==='daesungpam') return s==='대성팜';
     if(supplier==='baekje') return s==='백제약품';
@@ -898,10 +961,10 @@ function autoSetMinStockG2(){
   drugs.forEach(d=>{
     if(d.group!==2) return;
     const norm=normalize(d.name);
-    const unit=getUnit(d.name)||UNIT_MAP[norm];
+    const unit=getUnit(d.name,d.code)||UNIT_MAP[norm];
     if(!unit) return;
     const val=Array.isArray(unit)?Math.max(...unit):unit;
-    if(!lookupMinStock(map,d.name)){ map[normalize(d.name)]=val; changed=true; }
+    if(!lookupMinStock(map,d.name,d.code)){ map[d.code||normalize(d.name)]=val; changed=true; }
   });
   if(changed){ saveMinStock(map); renderG2(); }
 }
@@ -916,7 +979,7 @@ function doPrint(html, title){
 }
 function getStockLevel(d){
   const minStockMap=getMinStock();
-  const minVal=lookupMinStock(minStockMap,d.name);
+  const minVal=lookupMinStock(minStockMap,d.name,d.code);
   const sv=d.stock;
   if(sv==='-'||!minVal) return 0;
   if(sv<minVal) return 2;
@@ -975,9 +1038,9 @@ document.addEventListener('click',function(e){
   const idx=parseInt(btn.getAttribute('data-idx'));
   if(!drugs[idx]) return;
   const d=drugs[idx];
-  const current=getMinStockVal(d.name)||'';
+  const current=getMinStockVal(d.name,d.code)||'';
   showMinStockModal(d.name,current,function(val){
-    setMinStock(d.name,val);
+    setMinStock(d.name,val,d.code);
     const num=parseInt(val)||0;
     if(!val.trim()){ btn.textContent='-'; btn.style.background='#f3f4f6'; btn.style.color='#9ca3af'; }
     else{ btn.textContent=num; btn.style.background='#e0e7ff'; btn.style.color='#3730a3'; }
@@ -1027,12 +1090,7 @@ function registerAsG1(idx){
     if(unit) entry.unit=unit;
     list.push(entry);
     saveCustomG1(list);
-    if(minVal){
-      const ms=getMinStock();
-      ms[d.name]=minVal;
-      localStorage.setItem('min_stock',JSON.stringify(ms));
-      cloudSave('min_stock',ms);
-    }
+    if(minVal){ setMinStock(d.name,minVal,code); }
     d.group=1;
     overlay.remove();
     renderNew(); renderG1(); renderCustomG1List();
@@ -1081,13 +1139,13 @@ function autoOrderByMinStock(group){
   let count=0;
   drugs.forEach((d,idx)=>{
     if(d.group!==group) return;
-    const minVal=lookupMinStock(minStockMap,d.name);
+    const minVal=lookupMinStock(minStockMap,d.name,d.code);
     if(!minVal) return;
     const stock=d.stock==='-'?0:d.stock;
     if(stock>=minVal) return;
     const need=minVal-stock;
     const norm=normalize(d.name);
-    const unit=getUnit(d.name)||UNIT_MAP[norm];
+    const unit=getUnit(d.name,d.code)||UNIT_MAP[norm];
     if(Array.isArray(unit)){
       if(!d.orderQtyArr) d.orderQtyArr=[0,0];
       const u=unit[0];
@@ -1117,7 +1175,7 @@ function getOrderedList(){
   const ordered=[];
   drugs.forEach(d=>{
     const norm=normalize(d.name);
-    const unit=getUnit(d.name)||UNIT_MAP[norm];
+    const unit=getUnit(d.name,d.code)||UNIT_MAP[norm];
     if(Array.isArray(unit)){
       const labels = PACK_LABEL_MAP[d.name] || unit.map(u=>String(u));
       unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0) ordered.push({...d,orderQty:qty,unitVal:u,packLabel:labels[ui]}); });
@@ -1134,11 +1192,11 @@ function buildOrder(){
   const dateStr=`${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} ${orderTime==='AM'?'오전':'오후'}`;
   const ob=document.getElementById('ord-date-badge');
   ob.textContent=dateStr; ob.className='time-badge '+(orderTime==='AM'?'am-badge':'pm-badge');
-  const ds=ordered.filter(d=>getSupplier(d.maker,d.name)==='대성팜');
-  const bj=ordered.filter(d=>getSupplier(d.maker,d.name)==='백제약품');
-  const jy=ordered.filter(d=>getSupplier(d.maker,d.name)==='대전지오영');
-  const tj=ordered.filter(d=>getSupplier(d.maker,d.name)==='티제이팜');
-  const dw=ordered.filter(d=>getSupplier(d.maker,d.name)==='동원약품');
+  const ds=ordered.filter(d=>getSupplier(d.maker,d.name,d.code)==='대성팜');
+  const bj=ordered.filter(d=>getSupplier(d.maker,d.name,d.code)==='백제약품');
+  const jy=ordered.filter(d=>getSupplier(d.maker,d.name,d.code)==='대전지오영');
+  const tj=ordered.filter(d=>getSupplier(d.maker,d.name,d.code)==='티제이팜');
+  const dw=ordered.filter(d=>getSupplier(d.maker,d.name,d.code)==='동원약품');
   document.getElementById('o-total').textContent=ordered.length;
   document.getElementById('o-g1').textContent=ds.length;
   document.getElementById('o-g2').textContent=bj.length;
@@ -1187,11 +1245,11 @@ function deleteOrderItem(gi){
 function updateOrderStats(){
   const list=window._orderedList||[];
   document.getElementById('o-total').textContent=list.length;
-  document.getElementById('o-g1').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='대성팜').length;
-  document.getElementById('o-g2').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='백제약품').length;
-  if(document.getElementById('o-g4')) document.getElementById('o-g4').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='티제이팜').length;
-  if(document.getElementById('o-g5')) document.getElementById('o-g5').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='동원약품').length;
-  document.getElementById('o-g3').textContent=list.filter(d=>getSupplier(d.maker,d.name)==='대전지오영').length;
+  document.getElementById('o-g1').textContent=list.filter(d=>getSupplier(d.maker,d.name,d.code)==='대성팜').length;
+  document.getElementById('o-g2').textContent=list.filter(d=>getSupplier(d.maker,d.name,d.code)==='백제약품').length;
+  if(document.getElementById('o-g4')) document.getElementById('o-g4').textContent=list.filter(d=>getSupplier(d.maker,d.name,d.code)==='티제이팜').length;
+  if(document.getElementById('o-g5')) document.getElementById('o-g5').textContent=list.filter(d=>getSupplier(d.maker,d.name,d.code)==='동원약품').length;
+  document.getElementById('o-g3').textContent=list.filter(d=>getSupplier(d.maker,d.name,d.code)==='대전지오영').length;
 }
 function rebuildOrderTable(){
   const ordered=window._orderedList||[];
@@ -1202,11 +1260,11 @@ function rebuildOrderTable(){
 // 완료 모달
 
 function makePrintHTML(items,titleLabel,dateStr,timeStr){
-  const d1=items.filter(x=>getSupplier(x.maker,x.name)==='대성팜');
-  const d2=items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
-  const d3=items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
-  const d4=items.filter(x=>getSupplier(x.maker,x.name)==='티제이팜');
-  const d5=items.filter(x=>getSupplier(x.maker,x.name)==='동원약품');
+  const d1=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='대성팜');
+  const d2=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='백제약품');
+  const d3=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='대전지오영');
+  const d4=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='티제이팜');
+  const d5=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='동원약품');
 
   const colgroup='<colgroup><col style="width:7%"><col><col style="width:12%"><col style="width:14%"></colgroup>';
   const thead='<tr style="background:#ebebeb"><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">#</td><td style="border:1px solid #ccc;padding:4px 6px;font-size:15px;text-align:left;font-weight:700">약품명</td><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">수량</td><td style="border:1px solid #ccc;padding:4px;font-size:15px;text-align:center;font-weight:700">단위</td></tr>';
@@ -1283,7 +1341,7 @@ function completeOrder(){
   if(orderTime==='AM'){
     const amMap={};
     drugs.forEach(d=>{
-      const norm=normalize(d.name); const unit=getUnit(d.name)||UNIT_MAP[norm];
+      const norm=normalize(d.name); const unit=getUnit(d.name,d.code)||UNIT_MAP[norm];
       if(Array.isArray(unit)){ unit.forEach((u,ui)=>{ const qty=d.orderQtyArr?(d.orderQtyArr[ui]||0):0; if(qty>0){amMap[d.name+'|'+u]=qty;} }); }
       else { if(d.orderQty>0) amMap[d.name]=d.orderQty; }
     });
@@ -1321,11 +1379,11 @@ function renderLastOrder(){
   document.getElementById('last-data').style.display='block';
   document.getElementById('last-date-badge').textContent=(data.dateStr||'')+' '+(data.timeStr||'');
   const items=data.items||[];
-  const d1=items.filter(x=>getSupplier(x.maker,x.name)==='대성팜');
-  const d2=items.filter(x=>getSupplier(x.maker,x.name)==='백제약품');
-  const d3=items.filter(x=>getSupplier(x.maker,x.name)==='대전지오영');
-  const d4=items.filter(x=>getSupplier(x.maker,x.name)==='티제이팜');
-  const d5=items.filter(x=>getSupplier(x.maker,x.name)==='동원약품');
+  const d1=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='대성팜');
+  const d2=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='백제약품');
+  const d3=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='대전지오영');
+  const d4=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='티제이팜');
+  const d5=items.filter(x=>getSupplier(x.maker,x.name,x.code)==='동원약품');
   const lt=document.getElementById('last-total');if(lt)lt.textContent=items.length;
   const e1=document.getElementById('last-d1');if(e1)e1.textContent=d1.length;
   const e2=document.getElementById('last-d2');if(e2)e2.textContent=d2.length;
@@ -1343,6 +1401,7 @@ function renderLastOrder(){
 function clearLastOrder(){
   if(!confirm('직전 주문서를 삭제할까요?')) return;
   localStorage.removeItem('last_order');
+  cloudSave('last_order', null);
   renderLastOrder();
   updateLastOrderBtn();
 }
@@ -1401,10 +1460,10 @@ function renderDrugMgr(filter){
   });
   el.innerHTML=filtered.map((name,i)=>{
     const code=getCode(name);
-    const unit=getUnit(name)||'';
-    const minStock=getMinStockVal(name)||'';
+    const unit=getUnit(name,code)||'';
+    const minStock=getMinStockVal(name,code)||'';
     const maker=makerLookup[name]||makerLookup[baseName(name)]||'';
-    const sup=getSupplier(maker,name);
+    const sup=getSupplier(maker,name,code);
     const supColor=supColors[sup]||'#555';
     const grp=(GROUP1.includes(name)||customNames.includes(name))?'1군':'2군';
     return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fff">
@@ -1446,26 +1505,28 @@ function saveDrugMgrRow(name,i){
     saveCustomG1(customList);
   }
 
-  if(code){ saveDrugCode(bn,code); }
-  else { delete DRUG_CODE_MAP[bn]; localStorage.setItem('drug_codes',JSON.stringify(DRUG_CODE_MAP)); const e=Object.entries(DRUG_CODE_MAP); cloudSave('drug_codes_1',Object.fromEntries(e.slice(0,700))); cloudSave('drug_codes_2',Object.fromEntries(e.slice(700))); }
+  saveDrugCode(bn,code);
+  saveDrugUnit(bn,unit,code);
+  setMinStock(bn,minVal,code);
 
-  if(unit){ saveDrugUnit(bn,unit); }
-  else { delete UNIT_MAP[bn]; localStorage.setItem('drug_units',JSON.stringify(UNIT_MAP)); cloudSave('drug_units',UNIT_MAP); }
-
-  setMinStock(bn,minVal);
-
-  const sn=getSupplierNorm()||{bj:[],jy:[],tj:[],dw:[]};
-  const key=bn.length>4?bn.substring(0,4):bn;
-  // 이 약의 "정확한" 배정 키만 다른 목록에서 제거. 예전엔 이름에 포함되는지(부분일치)로
-  // 지웠는데, 그러면 예를 들어 "코자정"을 지오영으로 설정한 뒤 "코자정100밀리그램"을
-  // 다른 도매상으로 설정하면 "코자정100밀리그램"이 "코자정"을 부분 포함한다는 이유로
-  // "코자정"의 설정까지 같이 지워지는 문제가 있었음.
-  ['bj','jy','tj','dw'].forEach(k=>{ sn[k]=(sn[k]||[]).filter(x=>x!==key); });
-  if(sup==='백제약품'){ if(!sn.bj.includes(key)) sn.bj.push(key); }
-  else if(sup==='대전지오영'){ if(!sn.jy.includes(key)) sn.jy.push(key); }
-  else if(sup==='티제이팜'){ if(!sn.tj.includes(key)) sn.tj.push(key); }
-  else if(sup==='동원약품'){ if(!sn.dw.includes(key)) sn.dw.push(key); }
-  saveSupplierNorm(sn); applySupplierNorm(sn);
+  // 약품코드가 있으면 코드로 도매상을 고정 배정(이름표기 차이의 영향을 받지 않음).
+  // 비급여 등 코드가 없는 약만 예전 방식(이름 앞부분 4글자로 부분일치)을 사용.
+  mergeSaveSupplierNorm(sn=>{
+    if(code){
+      sn.byCode[code]=sup;
+      return;
+    }
+    const key=bn.length>4?bn.substring(0,4):bn;
+    // 이 약의 "정확한" 배정 키만 다른 목록에서 제거. 예전엔 이름에 포함되는지(부분일치)로
+    // 지웠는데, 그러면 예를 들어 "코자정"을 지오영으로 설정한 뒤 "코자정100밀리그램"을
+    // 다른 도매상으로 설정하면 "코자정100밀리그램"이 "코자정"을 부분 포함한다는 이유로
+    // "코자정"의 설정까지 같이 지워지는 문제가 있었음.
+    ['bj','jy','tj','dw'].forEach(k=>{ sn[k]=(sn[k]||[]).filter(x=>x!==key); });
+    if(sup==='백제약품'){ if(!sn.bj.includes(key)) sn.bj.push(key); }
+    else if(sup==='대전지오영'){ if(!sn.jy.includes(key)) sn.jy.push(key); }
+    else if(sup==='티제이팜'){ if(!sn.tj.includes(key)) sn.tj.push(key); }
+    else if(sup==='동원약품'){ if(!sn.dw.includes(key)) sn.dw.push(key); }
+  });
 
   const btn=document.querySelector(`button[onclick*="saveDrugMgrRow('${name.replace(/'/g,"\\'").replace(/\|/g,'\\|')}"]`);
   if(btn){ btn.textContent='✅ 저장됨'; btn.style.background='#16a34a'; setTimeout(()=>{ btn.textContent='저장'; btn.style.background='#0369a1'; },1500); }
