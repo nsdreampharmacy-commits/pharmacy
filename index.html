@@ -541,11 +541,19 @@ function applySupplierNorm(data){
   if(data.dw) data.dw.forEach(k=>DW_NORM.add(k));
   if(data.byCode) Object.assign(SUPPLIER_BY_CODE, data.byCode);
 }
+function isTodayOrder(data){
+  if(!data||!data.dateStr) return false;
+  const today=new Date();
+  const todayStr=today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0');
+  return data.dateStr.substring(0,10)===todayStr;
+}
 function updateLastOrderBtn(){
   const data=getLastOrder();
   const btn=document.getElementById('last-order-btn');
   const info=document.getElementById('last-order-info');
-  if(data){ btn.style.display='block'; info.textContent=`${data.dateStr||''} ${data.timeStr||''} · ${(data.items||[]).length}품목`; }
+  // 클라우드 동기화가 끝나기 전(직전 주문서가 오늘 것인지 아직 확정되기 전)에도, 날짜가 지난
+  // 주문서를 화면 배지에 잠깐 보여줬다가 사라지는 깜빡임이 없도록 여기서도 날짜를 확인함
+  if(data && isTodayOrder(data)){ btn.style.display='block'; info.textContent=`${data.dateStr||''} ${data.timeStr||''} · ${(data.items||[]).length}품목`; }
   else btn.style.display='none';
 }
 
@@ -615,9 +623,7 @@ setInterval(updateClock,1000); updateClock();
 (function precheckLastOrderDisplay(){
   const data=getLastOrder();
   if(!data||!data.dateStr) return;
-  const today=new Date();
-  const todayStr=today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0');
-  if(data.dateStr.substring(0,10)!==todayStr){ document.getElementById('last-nodata').style.display='block'; document.getElementById('last-data').style.display='none'; }
+  if(!isTodayOrder(data)){ document.getElementById('last-nodata').style.display='block'; document.getElementById('last-data').style.display='none'; }
 })();
 updateLastOrderBtn();
 // 백그라운드 클라우드 동기화
@@ -626,14 +632,9 @@ setTimeout(()=>{ syncFromCloud().then(()=>{
   // 아직 동기화 전이라 로컬에 어제 날짜만 남아있던 이 폰이 다른 폰이 오늘 이미 저장해둔
   // 주문서를 실수로 지우는 일이 없음.
   const loData=getLastOrder();
-  if(loData && loData.dateStr){
-    const today=new Date();
-    const todayStr=today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0');
-    const dataDate=loData.dateStr.substring(0,10);
-    if(dataDate!==todayStr){
-      localStorage.removeItem('last_order');
-      cloudSave('last_order',null);
-    }
+  if(loData && loData.dateStr && !isTodayOrder(loData)){
+    localStorage.removeItem('last_order');
+    cloudSave('last_order',null);
   }
   updateLastOrderBtn();
   renderLastOrder();
