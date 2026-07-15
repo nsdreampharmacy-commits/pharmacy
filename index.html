@@ -1143,22 +1143,27 @@ function autoOrderByMinStock(group){
     const need=minVal-stock;
     const norm=normalize(d.name);
     const unit=getUnit(d.name,d.code)||UNIT_MAP[norm];
+    const step=getStep(d.name);
     if(Array.isArray(unit)){
       if(!d.orderQtyArr) d.orderQtyArr=[0,0];
       const u=unit[0];
-      const qty=Math.ceil(need/u);
+      let qty=Math.ceil(need/u);
+      if(step>1) qty=Math.ceil(qty/step)*step;
       d.orderQtyArr[0]=qty;
       const el=document.getElementById('oi'+idx+'_0');
       if(el){el.value=qty;el.classList.add('filled');}
     } else if(unit){
-      const qty=Math.ceil(need/unit);
+      let qty=Math.ceil(need/unit);
+      if(step>1) qty=Math.ceil(qty/step)*step;
       d.orderQty=qty;
       const el=document.getElementById('oi'+idx);
       if(el){el.value=qty;el.classList.add('filled');}
     } else {
-      d.orderQty=need;
+      let qty=need;
+      if(step>1) qty=Math.ceil(qty/step)*step;
+      d.orderQty=qty;
       const el=document.getElementById('oi'+idx);
-      if(el){el.value=need;el.classList.add('filled');}
+      if(el){el.value=qty;el.classList.add('filled');}
     }
     updateCardStyle(idx);
     count++;
