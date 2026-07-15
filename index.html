@@ -780,7 +780,9 @@ function makeRow(d,idx){
   const minVal=lookupMinStock(minStockMap,d.name,d.code);
   const sv=d.stock;
   let stockBg='#f3f4f6',stockColor='#374151';
-  if(sv!=='-'&&minVal){
+  // 최소필요량이 설정 안 돼있거나 0이어도, 실제 재고가 마이너스면(오늘 쓴 만큼 기록이 안 돼있는 것) 항상 빨간색으로 표시
+  if(sv!=='-'&&sv<0){stockBg='#fee2e2';stockColor='#991b1b';}
+  else if(sv!=='-'&&minVal){
       if(sv<minVal){stockBg='#fee2e2';stockColor='#991b1b';}
       else if(sv<minVal*1.1){stockBg='#fef3c7';stockColor='#92400e';}
     }
@@ -859,7 +861,8 @@ function updateCardStyle(idx){
   const newStock=base==='-'?'-':base+ordered;
   const minVal=getMinStockVal(d.name,d.code);
   let bg='#f3f4f6',color='#374151';
-  if(newStock!=='-'&&minVal){
+  if(newStock!=='-'&&newStock<0){bg='#fee2e2';color='#991b1b';}
+  else if(newStock!=='-'&&minVal){
     if(newStock<minVal){bg='#fee2e2';color='#991b1b';}
     else if(newStock<minVal*1.1){bg='#fef3c7';color='#92400e';}
     else{bg='#f0fdf4';color='#166534';}
@@ -970,10 +973,12 @@ function doPrint(html, title){
   setTimeout(function(){ pa.innerHTML=''; document.title=prev; },30000);
 }
 function getStockLevel(d){
+  const sv=d.stock;
+  if(sv==='-') return 0;
+  if(sv<0) return 2;
   const minStockMap=getMinStock();
   const minVal=lookupMinStock(minStockMap,d.name,d.code);
-  const sv=d.stock;
-  if(sv==='-'||!minVal) return 0;
+  if(!minVal) return 0;
   if(sv<minVal) return 2;
   if(sv<minVal*1.1) return 1;
   return 0;
