@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1565c0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>성분명 검색 - 논산드림약국</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'맑은 고딕',sans-serif;background:#f0f2f5;font-size:14px;color:#1a1a2e}
+header{background:linear-gradient(135deg,#1565c0,#0d47a1);color:white;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+header h1{font-size:16px;font-weight:700}
+header p{font-size:11px;opacity:0.85;margin-top:2px}
+.content{padding:12px;padding-bottom:40px}
+.search-wrap{position:sticky;top:0;z-index:10;background:#f0f2f5;padding:10px 0;margin-bottom:6px}
+.search-box{height:46px;border:1.5px solid #d1d5db;border-radius:10px;padding:0 14px;font-size:16px;width:100%;display:block;background:white}
+.search-box:focus{outline:none;border-color:#1565c0}
+.status{font-size:11px;color:#6b7280;margin-bottom:10px;text-align:center}
+.status.err{color:#dc2626}
+.hint{text-align:center;color:#9ca3af;padding:40px 20px;font-size:13px;line-height:1.6}
+.group{background:white;border:1px solid #e0e6f0;border-radius:10px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+.group-ing{font-size:13px;font-weight:700;color:#1565c0;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eef2f7}
+.drug-name{font-size:13.5px;line-height:1.7;color:#1a1a2e}
+.drug-name+.drug-name{border-top:1px solid #f3f4f6;padding-top:4px}
+mark{background:#fef08a;border-radius:2px;padding:0 1px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🔍 성분명으로 약품 검색</h1>
+  <p>논산드림약국 · 등록된 약품 중 해당 성분이 든 약을 찾아줍니다</p>
+</header>
+<div class="content">
+  <div class="search-wrap">
+    <input type="text" id="q" class="search-box" placeholder="성분명을 입력하세요 (예: 아스피린)" oninput="doSearch(this.value)">
+  </div>
+  <div class="status" id="status">불러오는 중...</div>
+  <div id="result"><div class="hint">성분명을 입력하면<br>해당 성분이 든 약품 목록이 나옵니다</div></div>
+</div>
+<script>
+const GAS = 'https://script.google.com/macros/s/AKfycbzUw1ogPSkIjZ1RWk04zgRllWhRrrQeg1j38Vizq6e6iOVv11A-KCA_vPCJkNYBZO6rIw/exec';
+
+async function cloudLoad(key, retriesLeft){
+  if(retriesLeft===undefined) retriesLeft=2;
+  try{
+    const res = await fetch(GAS + '?action=get&key=' + encodeURIComponent(key), {cache:'no-cache'});
+    const text = await res.text();
+    if(!text || text === '{}' || text === 'null') return null;
+    return JSON.parse(text);
+  }catch(e){
+    if(retriesLeft>0){ await new Promise(r=>setTimeout(r,400)); return cloudLoad(key, retriesLeft-1); }
+    return null;
+  }
+}
+
+let entries = []; // [{name, ingredient}]
+const statusEl = document.getElementById('status');
+const resultEl = document.getElementById('result');
+
+function buildEntries(codeMap, ingMap){
+  // codeMap: 약품명 -> 코드. 역으로 코드 -> 약품명도 만들어서, 성분데이터가 코드로 저장된 경우 이름을 찾음
+  const codeToName = {};
+  Object.keys(codeMap).forEach(name=>{ codeToName[codeMap[name]] = name; });
+  const list = [];
+  Object.keys(ingMap).forEach(key=>{
+    const ingredient = ingMap[key];
+    const name = codeToName[key] || key; // 코드로 저장된 경우 이름으로 변환, 코드가 없으면 key 자체가 이름
+    list.push({name, ingredient});
+  });
+  return list;
+}
+
+function render(){
+  const cached = localStorage.getItem('ing_entries');
+  if(cached){ try{ entries = JSON.parse(cached); }catch(e){} }
+  statusEl.textContent = entries.length ? `${entries.length}개 약품의 성분 정보 등록됨` : '';
+}
+
+async function loadAll(){
+  const [c1, c2, ing] = await Promise.all([
+    cloudLoad('drug_codes_1'), cloudLoad('drug_codes_2'), cloudLoad('drug_ingredients')
+  ]);
+  if(!ing){
+    statusEl.textContent = '클라우드에서 성분 데이터를 불러오지 못했습니다.';
+    statusEl.classList.add('err');
+    return;
+  }
+  const codeMap = Object.assign({}, c1||{}, c2||{});
+  entries = buildEntries(codeMap, ing);
+  localStorage.setItem('ing_entries', JSON.stringify(entries));
+  statusEl.classList.remove('err');
+  statusEl.textContent = `${entries.length}개 약품의 성분 정보 등록됨`;
+}
+
+function highlight(text, q){
+  if(!q) return text;
+  const idx = text.indexOf(q);
+  if(idx===-1) return text;
+  return text.slice(0,idx) + '<mark>' + text.slice(idx,idx+q.length) + '</mark>' + text.slice(idx+q.length);
+}
+
+function doSearch(q){
+  q = q.trim();
+  if(!q){ resultEl.innerHTML = '<div class="hint">성분명을 입력하면<br>해당 성분이 든 약품 목록이 나옵니다</div>'; return; }
+  const matched = entries.filter(e=>e.ingredient.includes(q));
+  if(!matched.length){ resultEl.innerHTML = '<div class="hint">일치하는 성분을 찾을 수 없습니다.<br>등록된 약품 중 해당 성분 정보가 아직 없을 수 있습니다.</div>'; return; }
+  // 같은 성분명끼리 묶어서 표시
+  const groups = {};
+  matched.forEach(e=>{ (groups[e.ingredient] = groups[e.ingredient]||[]).push(e.name); });
+  const groupKeys = Object.keys(groups).sort((a,b)=>a.includes(q)===b.includes(q) ? a.localeCompare(b) : (a.startsWith(q)?-1:1));
+  resultEl.innerHTML = groupKeys.map(ing=>{
+    const names = groups[ing].sort();
+    return `<div class="group"><div class="group-ing">${highlight(ing,q)} (${names.length}개)</div>` +
+      names.map(n=>`<div class="drug-name">${n}</div>`).join('') + `</div>`;
+  }).join('');
+}
+
+render();
+loadAll();
+</script>
+</body>
+</html>
