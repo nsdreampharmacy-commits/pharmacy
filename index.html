@@ -319,6 +319,22 @@ let SUPPLIER_BY_CODE={};
 
 const G1_SET=new Set(GROUP1);
 const G2_SET=new Set(GROUP2);
+let G1_CODES=new Set();
+let G2_CODES=new Set();
+// 약국 조제 프로그램이 업데이트되면서 약품명 표기가 살짝 바뀌어도(예: "부광메티마졸정_(5mg/1정)"
+// -> "부광메티마졸정5밀리그램_(5mg/1정)") 1군/2군으로 이미 등록된 약이 계속 "처음 사용"으로
+// 잘못 분류되지 않도록, 이름이 아니라 약품코드 기준으로 먼저 분류하고 이름은 코드가 없을 때만 사용.
+function buildGroupCodeSets(){
+  G1_CODES=new Set(); G2_CODES=new Set();
+  GROUP1.forEach(n=>{ const c=DRUG_CODE_MAP[n]; if(c) G1_CODES.add(c); });
+  GROUP2.forEach(n=>{ const c=DRUG_CODE_MAP[n]; if(c) G2_CODES.add(c); });
+}
+function classifyGroup(name, code, customG1Names, customG1Codes){
+  const norm=normalize(name);
+  if((code&&G1_CODES.has(code))||G1_SET.has(name)||G1_SET.has(norm)||customG1Names.includes(name)||(code&&customG1Codes&&customG1Codes.has(code))) return 1;
+  if((code&&G2_CODES.has(code))||G2_SET.has(name)||G2_SET.has(norm)) return 2;
+  return 0;
+}
 
 let drugs=[];
 let orderTime='AM';
@@ -707,11 +723,13 @@ function handleFile(e){ const f=e.target.files[0]; if(f) processFile(f); documen
 // 먼저 끝나서 아직 등록 안 된 것처럼 보였던 약품을 바로잡기 위함.
 function reclassifyGroups(){
   if(!drugs || !drugs.length) return;
-  const customG1Names=getCustomG1().map(x=>x.name);
+  buildGroupCodeSets();
+  const customG1List=getCustomG1();
+  const customG1Names=customG1List.map(x=>x.name);
+  const customG1Codes=new Set(customG1List.map(x=>x.code).filter(Boolean));
   let changed=false;
   drugs.forEach(d=>{
-    const norm=normalize(d.name);
-    const newGroup=(G1_SET.has(d.name)||G1_SET.has(norm)||customG1Names.includes(d.name))?1:(G2_SET.has(d.name)||G2_SET.has(norm)?2:0);
+    const newGroup=classifyGroup(d.name, d.code, customG1Names, customG1Codes);
     if(newGroup!==d.group){ d.group=newGroup; changed=true; }
   });
   if(!changed) return;
@@ -741,7 +759,10 @@ function processFile(file){
       const codeKey=keys.find(k=>k==='보험코드')||keys.find(k=>k.includes('보험코드'))||keys.find(k=>k.includes('약품코드'));
       if(!nameKey){ alert('약품명 컬럼을 찾을 수 없습니다.'); return; }
       if(!qtyKey){ alert('수량 컬럼을 찾을 수 없습니다.\n컬럼: '+keys.join(', ')); return; }
-      const customG1Names=getCustomG1().map(x=>x.name);
+      buildGroupCodeSets();
+      const customG1List=getCustomG1();
+      const customG1Names=customG1List.map(x=>x.name);
+      const customG1Codes=new Set(customG1List.map(x=>x.code).filter(Boolean));
       // 코드 기반 약품명 재매핑 (이름은 같지만 코드로 구분되는 약품)
       const CODE_NAME_REMAP = {
         '641607171': '스타빅현탁액-포',
@@ -759,8 +780,7 @@ function processFile(file){
         const stockRaw=stockKey?parseFloat(String(r[stockKey]||'').replace(/,/g,'')):NaN;
         const stock=stockKey?(isNaN(stockRaw)?'-':stockRaw):'-';
         const maker=makerKey?String(r[makerKey]||'').trim():'';
-        const norm=normalize(name);
-        const group=G1_SET.has(name)||G1_SET.has(norm)||customG1Names.includes(name)?1:(G2_SET.has(name)||G2_SET.has(norm)?2:0);
+        const group=classifyGroup(name, code, customG1Names, customG1Codes);
         return{name,code,qty,stock,maker,group,orderQty:0,orderQtyArr:[0,0],memo:''};
       }).filter(Boolean);
       const g1=drugs.filter(d=>d.group===1).length;
