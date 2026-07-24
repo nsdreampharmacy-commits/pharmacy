@@ -80,15 +80,16 @@ function render(){
 }
 
 async function loadAll(){
-  const [c1, c2, ing] = await Promise.all([
-    cloudLoad('drug_codes_1'), cloudLoad('drug_codes_2'), cloudLoad('drug_ingredients')
+  const [c1, c2, ing1, ing2] = await Promise.all([
+    cloudLoad('drug_codes_1'), cloudLoad('drug_codes_2'), cloudLoad('drug_ingredients_1'), cloudLoad('drug_ingredients_2')
   ]);
-  if(!ing){
+  if(!ing1 && !ing2){
     statusEl.textContent = '클라우드에서 성분 데이터를 불러오지 못했습니다.';
     statusEl.classList.add('err');
     return;
   }
   const codeMap = Object.assign({}, c1||{}, c2||{});
+  const ing = Object.assign({}, ing1||{}, ing2||{});
   entries = buildEntries(codeMap, ing);
   localStorage.setItem('ing_entries', JSON.stringify(entries));
   statusEl.classList.remove('err');
