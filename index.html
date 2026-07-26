@@ -800,6 +800,7 @@ function processFile(file){
       document.getElementById('upload-result').style.display='block';
       renderG1(); renderG2(); renderNew();
       autoSetMinStockG2();
+      updateInStockList();
       alert('업로드 완료!\n1군: '+g1+'개 / 2군: '+g2+'개'+(etc>0?'\n⭐ 처음 사용: '+etc+'개':''));
     }catch(err){ alert('파일 읽기 오류: '+err.message); }
   };
@@ -1183,6 +1184,15 @@ async function registerIngredientForNewDrug(name, code){
     else if(JSON.stringify(map1).length<=JSON.stringify(map2).length){ map1[key]=ingredient; cloudSave('drug_ingredients_1', map1); }
     else{ map2[key]=ingredient; cloudSave('drug_ingredients_2', map2); }
   }catch(e){}
+}
+// 성분검색(ingredient.html)에서 "현재 재고 있는 약만" 찾도록, 오늘 업로드한 재고 기준으로
+// 재고가 있는 약 목록을 클라우드에 저장. 매일 업로드할 때마다 그날의 재고로 다시 계산해서
+// 통째로 교체(과거 기록을 이어붙이는 게 아니라 "지금 재고 있는 것"의 스냅샷이라 병합이 아니라
+// 교체가 맞음) - 이렇게 하면 재고가 소진된 약은 자동으로 검색에서 빠지고, 새로 들여온 약은
+// 자동으로 검색에 들어옴.
+function updateInStockList(){
+  const keys=drugs.filter(d=>d.stock!=='-'&&d.stock>0).map(d=>d.code||normalize(d.name));
+  cloudSave('drug_in_stock', [...new Set(keys)]);
 }
 function removeCustomG1(name){
   if(!confirm('"'+name.substring(0,20)+'..." 을 1군에서 제거할까요?')) return;

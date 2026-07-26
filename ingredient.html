@@ -60,12 +60,14 @@ let entries = []; // [{name, ingredient}]
 const statusEl = document.getElementById('status');
 const resultEl = document.getElementById('result');
 
-function buildEntries(codeMap, ingMap){
+function buildEntries(codeMap, ingMap, inStockSet){
   // codeMap: 약품명 -> 코드. 역으로 코드 -> 약품명도 만들어서, 성분데이터가 코드로 저장된 경우 이름을 찾음
   const codeToName = {};
   Object.keys(codeMap).forEach(name=>{ codeToName[codeMap[name]] = name; });
   const list = [];
   Object.keys(ingMap).forEach(key=>{
+    // 재고가 있는 약만 검색되도록: 재고 목록에 없는(=재고 0이거나 더 이상 취급 안 하는) 약은 건너뜀
+    if(inStockSet && !inStockSet.has(key)) return;
     const ingredient = ingMap[key];
     const name = codeToName[key] || key; // 코드로 저장된 경우 이름으로 변환, 코드가 없으면 key 자체가 이름
     list.push({name, ingredient});
@@ -80,8 +82,8 @@ function render(){
 }
 
 async function loadAll(){
-  const [c1, c2, ing1, ing2] = await Promise.all([
-    cloudLoad('drug_codes_1'), cloudLoad('drug_codes_2'), cloudLoad('drug_ingredients_1'), cloudLoad('drug_ingredients_2')
+  const [c1, c2, ing1, ing2, stockList] = await Promise.all([
+    cloudLoad('drug_codes_1'), cloudLoad('drug_codes_2'), cloudLoad('drug_ingredients_1'), cloudLoad('drug_ingredients_2'), cloudLoad('drug_in_stock')
   ]);
   if(!ing1 && !ing2){
     statusEl.textContent = '클라우드에서 성분 데이터를 불러오지 못했습니다.';
@@ -90,10 +92,11 @@ async function loadAll(){
   }
   const codeMap = Object.assign({}, c1||{}, c2||{});
   const ing = Object.assign({}, ing1||{}, ing2||{});
-  entries = buildEntries(codeMap, ing);
+  const inStockSet = stockList ? new Set(stockList) : null;
+  entries = buildEntries(codeMap, ing, inStockSet);
   localStorage.setItem('ing_entries', JSON.stringify(entries));
   statusEl.classList.remove('err');
-  statusEl.textContent = `${entries.length}개 약품의 성분 정보 등록됨`;
+  statusEl.textContent = `현재 재고 있는 약품 ${entries.length}개 중에서 검색`;
 }
 
 function highlight(text, q){
