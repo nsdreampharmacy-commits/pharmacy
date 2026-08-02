@@ -302,6 +302,9 @@ let DRUG_CODE_MAP = {};
 // 분류해도 코드 매칭이 바로 되도록 함 (클라우드 동기화가 끝나면 최신 값으로 다시 갱신됨).
 try{ Object.assign(DRUG_CODE_MAP, JSON.parse(localStorage.getItem('drug_codes')||'{}')); }catch(e){}
 let UNIT_MAP = {};
+// 주문단위(규격)도 약품코드와 같은 이유로 즉시 로딩 - 클라우드 응답 전에 업로드하면
+// 규격이 안 뜨는 문제가 있었음(껐다 켜면 되기도 하는 건 그 사이 동기화가 끝났기 때문).
+try{ Object.assign(UNIT_MAP, JSON.parse(localStorage.getItem('drug_units')||'{}')); }catch(e){}
 // 배열 unit 레이블 (숫자 unit과 별도로 화면에 표시할 이름)
 const PACK_LABEL_MAP = {
   '로제듀오정10/2.5밀리그램(에제티미브,로수바스타틴칼슘)_(1정)': ['30(병)','30(PTP)'],
