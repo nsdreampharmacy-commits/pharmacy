@@ -324,6 +324,11 @@ const TJ_NORM=new Set([]);
 const DW_NORM=new Set([]);
 const JIOYOUNG_EXTRA=new Set([]);
 let SUPPLIER_BY_CODE={};
+// 약품코드/규격과 같은 이유로 도매상 배정 데이터도 즉시 로딩 - 클라우드 응답 전에 자동주문&완료를
+// 누르면 아직 최신 배정(특히 SUPPLIER_BY_CODE의 코드 기준 재배정)을 못 받아온 상태라 예전
+// 이름 기반 배정으로 잘못 분류되는 문제가 있었음(예: "테람트윈정" 백제약품->대성팜으로 재배정
+// 했는데도 타이밍 문제로 백제약품 주문에 들어간 사례).
+try{ applySupplierNorm(JSON.parse(localStorage.getItem('supplier_norm')||'null')); }catch(e){}
 
 const G1_SET=new Set(GROUP1);
 const G2_SET=new Set(GROUP2);
